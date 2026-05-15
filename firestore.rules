@@ -1,0 +1,45 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Users: anyone logged in can read all users (for classmate search/DM)
+    // Only you can write your own profile
+    match /users/{uid} {
+      allow read: if request.auth != null;
+      allow write: if request.auth != null && request.auth.uid == uid;
+    }
+
+    // Schedules: anyone logged in can read all schedules (classmate feature)
+    // Only you can write your own schedule
+    match /schedules/{uid} {
+      allow read: if request.auth != null;
+      allow write: if request.auth != null && request.auth.uid == uid;
+    }
+
+    // Chats: authenticated users can read all chats
+    // Authenticated users can create chats 
+    match /chats/{chatId} {
+      allow read: if request.auth != null;
+      allow create: if request.auth != null;
+      allow update: if request.auth != null;
+
+      // Members subcollection (class chat membership)
+      match /members/{uid} {
+        allow read: if request.auth != null;
+        allow write: if request.auth != null;
+      }
+
+      // Messages: authenticated users can read and create messages
+      // Cannot edit or delete messages
+      match /messages/{msgId} {
+        allow read: if request.auth != null;
+        allow create: if request.auth != null
+          && request.auth.uid == request.resource.data.uid
+          && request.resource.data.text is string
+          && request.resource.data.text.size() > 0
+          && request.resource.data.text.size() <= 2000;
+        allow update, delete: if false;
+      }
+    }
+  }
+}
