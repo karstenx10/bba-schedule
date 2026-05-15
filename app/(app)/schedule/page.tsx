@@ -5,9 +5,10 @@ import { doc, getDoc, setDoc, serverTimestamp } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { useAuth } from '@/context/AuthContext';
 import { COURSES, DEPARTMENTS, getCourseById } from '@/lib/courses';
+import Link from 'next/link';
 import styles from './schedule.module.css';
 
-interface Schedule {
+interface SemesterSchedule {
   aBlock: string;
   bBlock: string;
   hasCDBlock: boolean;
@@ -15,11 +16,16 @@ interface Schedule {
   cdBlock: string;
   dBlock: string;
   eBlock: string;
-  grade?: string;
+}
+
+interface ScheduleDoc {
+  semester1: SemesterSchedule;
+  semester2: SemesterSchedule;
+  grade: string;
   updatedAt?: unknown;
 }
 
-const EMPTY_SCHEDULE: Schedule = {
+const EMPTY_SEMESTER: SemesterSchedule = {
   aBlock: '',
   bBlock: '',
   hasCDBlock: false,
@@ -27,6 +33,11 @@ const EMPTY_SCHEDULE: Schedule = {
   cdBlock: '',
   dBlock: '',
   eBlock: '',
+};
+
+const EMPTY_DOC: ScheduleDoc = {
+  semester1: { ...EMPTY_SEMESTER },
+  semester2: { ...EMPTY_SEMESTER },
   grade: '',
 };
 
@@ -37,6 +48,7 @@ function CourseSelect({
   label,
   sublabel,
   badge,
+  semester,
 }: {
   id: string;
   value: string;
@@ -44,6 +56,7 @@ function CourseSelect({
   label: string;
   sublabel?: string;
   badge?: string;
+  semester: number;
 }) {
   const [search, setSearch] = useState('');
   const [open, setOpen] = useState(false);
@@ -104,6 +117,18 @@ function CourseSelect({
           </svg>
         </button>
 
+        {selected && (
+          <Link 
+            href={`/classmates?courseId=${selected.id}&semester=${semester}&block=${label}`} 
+            className={styles.classmateLink}
+          >
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+              <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+            </svg>
+            View Classmates
+          </Link>
+        )}
+
         {open && (
           <div className={styles.dropdown}>
             <div className={styles.searchWrap}>
@@ -157,8 +182,9 @@ function CourseSelect({
 
 export default function SchedulePage() {
   const { user } = useAuth();
-  const [schedule, setSchedule] = useState<Schedule>(EMPTY_SCHEDULE);
-  const [saved, setSaved] = useState<Schedule>(EMPTY_SCHEDULE);
+  const [semester, setSemester] = useState<1 | 2>(1);
+  const [docData, setDocData] = useState<ScheduleDoc>(EMPTY_DOC);
+  const [savedData, setSavedData] = useState<ScheduleDoc>(EMPTY_DOC);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [saveMsg, setSaveMsg] = useState('');
@@ -167,60 +193,86 @@ export default function SchedulePage() {
     if (!user) return;
     getDoc(doc(db, 'schedules', user.uid)).then((snap) => {
       if (snap.exists()) {
-        const data = snap.data() as Schedule;
-        setSchedule(data);
-        setSaved(data);
+        const raw = snap.data() as any;
+        // Migration: check if old structure (no semester keys)
+        let initialized: ScheduleDoc;
+        if (!raw.semester1 && !raw.semester2) {
+          initialized = {
+            semester1: {
+              aBlock: raw.aBlock || '',
+              bBlock: raw.bBlock || '',
+              hasCDBlock: !!raw.hasCDBlock,
+              cBlock: raw.cBlock || '',
+              cdBlock: raw.cdBlock || '',
+              dBlock: raw.dBlock || '',
+              eBlock: raw.eBlock || '',
+            },
+            semester2: { ...EMPTY_SEMESTER },
+            grade: raw.grade || '',
+          };
+        } else {
+          initialized = raw as ScheduleDoc;
+        }
+        setDocData(initialized);
+        setSavedData(initialized);
       }
       setLoading(false);
     });
   }, [user]);
 
-  const isDirty = JSON.stringify(schedule) !== JSON.stringify(saved);
+  const isDirty = JSON.stringify(docData) !== JSON.stringify(savedData);
+  const currentSchedule = semester === 1 ? docData.semester1 : docData.semester2;
 
   const handleSave = async () => {
     if (!user) return;
     setSaving(true);
     try {
-      const data: Schedule = { ...schedule, updatedAt: serverTimestamp() };
+      const data: ScheduleDoc = { ...docData, updatedAt: serverTimestamp() };
       await setDoc(doc(db, 'schedules', user.uid), data);
 
       // Update grade in user profile
-      if (schedule.grade) {
-        await setDoc(doc(db, 'users', user.uid), { grade: schedule.grade }, { merge: true });
+      if (docData.grade) {
+        await setDoc(doc(db, 'users', user.uid), { grade: docData.grade }, { merge: true });
       }
 
-      // Auto-create class chat rooms for each enrolled course
-      const blockCourses: { block: string; courseId: string }[] = [
-        { block: 'A', courseId: schedule.aBlock },
-        { block: 'B', courseId: schedule.bBlock },
-        { block: schedule.hasCDBlock ? 'CD' : 'C', courseId: schedule.hasCDBlock ? schedule.cdBlock : schedule.cBlock },
-        ...(!schedule.hasCDBlock && schedule.dBlock ? [{ block: 'D', courseId: schedule.dBlock }] : []),
-        { block: 'E', courseId: schedule.eBlock },
-      ].filter((x) => x.courseId);
+      // Auto-create class chat rooms
+      const sems = [
+        { num: 1, sched: docData.semester1 },
+        { num: 2, sched: docData.semester2 }
+      ];
 
-      for (const { block, courseId } of blockCourses) {
-        const chatId = `class_${courseId}_${block}`;
-        const chatRef = doc(db, 'chats', chatId);
-        const chatSnap = await getDoc(chatRef);
-        if (!chatSnap.exists()) {
-          const course = getCourseById(courseId);
-          await setDoc(chatRef, {
-            type: 'class',
-            courseName: course?.name ?? courseId,
-            block,
-            participants: [],
-            createdAt: serverTimestamp(),
+      for (const sem of sems) {
+        const s = sem.sched;
+        const blockCourses = [
+          { block: 'A', courseId: s.aBlock },
+          { block: 'B', courseId: s.bBlock },
+          { block: s.hasCDBlock ? 'CD' : 'C', courseId: s.hasCDBlock ? s.cdBlock : s.cBlock },
+          ...(!s.hasCDBlock && s.dBlock ? [{ block: 'D', courseId: s.dBlock }] : []),
+          { block: 'E', courseId: s.eBlock },
+        ].filter(x => x.courseId);
+
+        for (const { block, courseId } of blockCourses) {
+          const chatId = `class_${courseId}_${block}_S${sem.num}`;
+          const chatRef = doc(db, 'chats', chatId);
+          const chatSnap = await getDoc(chatRef);
+          if (!chatSnap.exists()) {
+            const course = getCourseById(courseId);
+            await setDoc(chatRef, {
+              type: 'class',
+              courseName: course?.name ?? courseId,
+              block,
+              semester: sem.num,
+              createdAt: serverTimestamp(),
+            });
+          }
+          await setDoc(doc(db, 'chats', chatId, 'members', user.uid), {
+            uid: user.uid,
+            joinedAt: serverTimestamp(),
           });
         }
-        // Track student enrollment in this class chat
-        const enrollRef = doc(db, 'chats', chatId, 'members', user.uid);
-        await setDoc(enrollRef, {
-          uid: user.uid,
-          joinedAt: serverTimestamp(),
-        });
       }
 
-      setSaved(data);
+      setSavedData(data);
       setSaveMsg('Schedule saved!');
       setTimeout(() => setSaveMsg(''), 3000);
     } catch (err) {
@@ -230,9 +282,19 @@ export default function SchedulePage() {
     setSaving(false);
   };
 
-  const set = useCallback((key: keyof Schedule) => (value: string | boolean) => {
-    setSchedule((prev) => ({ ...prev, [key]: value }));
-  }, []);
+  const updateDoc = (key: keyof ScheduleDoc, value: string) => {
+    setDocData(prev => ({ ...prev, [key]: value }));
+  };
+
+  const updateSemester = useCallback((key: keyof SemesterSchedule, value: string | boolean) => {
+    setDocData(prev => ({
+      ...prev,
+      [semester === 1 ? 'semester1' : 'semester2']: {
+        ...prev[semester === 1 ? 'semester1' : 'semester2'],
+        [key]: value
+      }
+    }));
+  }, [semester]);
 
   if (loading) {
     return (
@@ -254,8 +316,8 @@ export default function SchedulePage() {
               <span className={styles.gradeLabel}>Grade:</span>
               <select
                 className={styles.gradeInput}
-                value={schedule.grade || ''}
-                onChange={(e) => set('grade')(e.target.value)}
+                value={docData.grade || ''}
+                onChange={(e) => updateDoc('grade', e.target.value)}
               >
                 <option value="">Set Grade…</option>
                 <option value="9">9th Grade</option>
@@ -283,26 +345,40 @@ export default function SchedulePage() {
         </div>
       </div>
 
+      <div className={styles.semesterTabs}>
+        <button 
+          className={`${styles.semesterTab} ${semester === 1 ? styles.semesterTabActive : ''}`}
+          onClick={() => setSemester(1)}
+        >
+          Semester 1
+        </button>
+        <button 
+          className={`${styles.semesterTab} ${semester === 2 ? styles.semesterTabActive : ''}`}
+          onClick={() => setSemester(2)}
+        >
+          Semester 2
+        </button>
+      </div>
+
       <div className={styles.scheduleGrid}>
-        {/* A Block */}
         <CourseSelect
           id="a"
           label="A"
-          value={schedule.aBlock}
-          onChange={set('aBlock') as (v: string) => void}
+          value={currentSchedule.aBlock}
+          onChange={(v) => updateSemester('aBlock', v)}
           sublabel="Block — Daily, 8:15–9:20"
+          semester={semester}
         />
 
-        {/* B Block */}
         <CourseSelect
           id="b"
           label="B"
-          value={schedule.bBlock}
-          onChange={set('bBlock') as (v: string) => void}
+          value={currentSchedule.bBlock}
+          onChange={(v) => updateSemester('bBlock', v)}
           sublabel="Block — Daily, 9:25–10:30"
+          semester={semester}
         />
 
-        {/* CD / C+D Toggle Section */}
         <div className={styles.cdSection}>
           <div className={styles.cdToggleHeader}>
             <div>
@@ -312,66 +388,69 @@ export default function SchedulePage() {
             <div className={styles.toggle}>
               <button
                 type="button"
-                className={`${styles.toggleBtn} ${!schedule.hasCDBlock ? styles.toggleActive : ''}`}
-                onClick={() => set('hasCDBlock')(false)}
+                className={`${styles.toggleBtn} ${!currentSchedule.hasCDBlock ? styles.toggleActive : ''}`}
+                onClick={() => updateSemester('hasCDBlock', false)}
               >
                 Separate C &amp; D
               </button>
               <button
                 type="button"
-                className={`${styles.toggleBtn} ${schedule.hasCDBlock ? styles.toggleActive : ''}`}
-                onClick={() => set('hasCDBlock')(true)}
+                className={`${styles.toggleBtn} ${currentSchedule.hasCDBlock ? styles.toggleActive : ''}`}
+                onClick={() => updateSemester('hasCDBlock', true)}
               >
                 CD Block (double)
               </button>
             </div>
           </div>
 
-          {schedule.hasCDBlock ? (
+          {currentSchedule.hasCDBlock ? (
             <CourseSelect
               id="cd"
               label="CD"
-              value={schedule.cdBlock}
-              onChange={set('cdBlock') as (v: string) => void}
+              value={currentSchedule.cdBlock}
+              onChange={(v) => updateSemester('cdBlock', v)}
               sublabel="Double Block — Every day"
               badge="Full period"
+              semester={semester}
             />
           ) : (
             <div className={styles.cdPair}>
               <CourseSelect
                 id="c"
                 label="C"
-                value={schedule.cBlock}
-                onChange={set('cBlock') as (v: string) => void}
+                value={currentSchedule.cBlock}
+                onChange={(v) => updateSemester('cBlock', v)}
                 sublabel="Day 1 only"
                 badge="Alternating"
+                semester={semester}
               />
               <CourseSelect
                 id="d"
                 label="D"
-                value={schedule.dBlock}
-                onChange={set('dBlock') as (v: string) => void}
+                value={currentSchedule.dBlock}
+                onChange={(v) => updateSemester('dBlock', v)}
                 sublabel="Day 2 only"
                 badge="Alternating"
+                semester={semester}
               />
             </div>
           )}
         </div>
 
-        {/* E Block */}
         <CourseSelect
           id="e"
           label="E"
-          value={schedule.eBlock}
-          onChange={set('eBlock') as (v: string) => void}
+          value={currentSchedule.eBlock}
+          onChange={(v) => updateSemester('eBlock', v)}
           sublabel="Block — Daily, 1:30–2:35"
+          semester={semester}
         />
       </div>
 
       <div className={styles.legend}>
         <div className={styles.legendItem}>
           <div className={styles.legendDot} style={{ background: 'var(--green-400)' }} />
-          <span>Separate C &amp; D blocks alternate by day — each course meets every other day</span>
+          <span>Separate C &amp; D blocks alternate by day — course meets Day 1 (C) or Day 2 (D)</span>
         </div>
         <div className={styles.legendItem}>
           <div className={styles.legendDot} style={{ background: 'var(--gold-400)' }} />

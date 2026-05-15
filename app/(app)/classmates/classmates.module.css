@@ -15,7 +15,54 @@
 
 .subtitle { font-size: 14px; color: var(--text-muted); }
 
-.searchSection { position: relative; margin-bottom: 32px; }
+.headerRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+.filterBar {
+  display: flex;
+  align-items: flex-start;
+  gap: 16px;
+  margin-bottom: 32px;
+}
+
+.searchSection {
+  flex: 1;
+  position: relative;
+}
+
+.semesterToggle {
+  display: flex;
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  padding: 4px;
+  border-radius: var(--radius-sm);
+  gap: 4px;
+}
+
+.semBtn {
+  padding: 8px 16px;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text-muted);
+  background: transparent;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all var(--transition);
+}
+
+.semBtn:hover { color: var(--text-primary); }
+
+.semBtnActive {
+  background: var(--green-600);
+  color: var(--text-primary);
+  box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+}
 
 .searchBox {
   display: flex;

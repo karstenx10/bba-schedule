@@ -94,6 +94,33 @@
   gap: 16px;
 }
 
+.semesterTabs {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 24px;
+  border-bottom: 1px solid var(--border);
+  padding-bottom: 0;
+}
+
+.semesterTab {
+  padding: 10px 20px;
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--text-muted);
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  transition: all var(--transition);
+  border-bottom: 2px solid transparent;
+  margin-bottom: -1px;
+}
+
+.semesterTab:hover { color: var(--text-primary); }
+.semesterTabActive { 
+  color: var(--green-300); 
+  border-bottom-color: var(--green-500);
+}
+
 /* Individual block card */
 .blockCard {
   background: var(--bg-surface);
@@ -182,6 +209,28 @@
   font-size: 14px;
   color: var(--text-muted);
   font-style: italic;
+}
+
+.classmateLink {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--gold-400);
+  text-decoration: none;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-top: 10px;
+  padding: 4px 0;
+  opacity: 0.7;
+  transition: opacity 0.2s, transform 0.2s;
+  width: fit-content;
+}
+
+.classmateLink:hover { 
+  opacity: 1; 
+  transform: translateX(2px);
 }
 
 /* Dropdown */

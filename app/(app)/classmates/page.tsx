@@ -1,6 +1,7 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Suspense } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { collection, getDocs, query, where, doc, getDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { COURSES, getCourseById } from '@/lib/courses';
@@ -30,9 +31,12 @@ const BLOCKS = [
   { key: 'eBlock', label: 'E Block' },
 ];
 
-export default function ClassmatesPage() {
+function ClassmateContent() {
+  const searchParams = useSearchParams();
   const { user } = useAuth();
-  const [selectedCourse, setSelectedCourse] = useState('');
+
+  const [selectedCourse, setSelectedCourse] = useState(searchParams.get('courseId') || '');
+  const [semester, setSemester] = useState<1 | 2>(Number(searchParams.get('semester')) === 2 ? 2 : 1);
   const [classmates, setClassmates] = useState<ClassmateResult[]>([]);
   const [searching, setSearching] = useState(false);
   const [search, setSearch] = useState('');
@@ -53,11 +57,13 @@ export default function ClassmatesPage() {
       setSearching(true);
       const results: ClassmateResult[] = [];
       const seen = new Set<string>();
+      const semKey = `semester${semester}`;
 
       for (const block of BLOCKS) {
+        // Query the nested semester object field
         const q = query(
           collection(db, 'schedules'),
-          where(block.key, '==', selectedCourse)
+          where(`${semKey}.${block.key}`, '==', selectedCourse)
         );
         const snap = await getDocs(q);
 
@@ -81,7 +87,16 @@ export default function ClassmatesPage() {
     };
 
     findClassmates();
-  }, [selectedCourse, user]);
+  }, [selectedCourse, semester, user]);
+
+  // Set search text if course is pre-selected via URL
+  useEffect(() => {
+    const courseId = searchParams.get('courseId');
+    if (courseId) {
+      const c = getCourseById(courseId);
+      if (c) setSearch(c.name);
+    }
+  }, [searchParams]);
 
   const course = getCourseById(selectedCourse);
 
@@ -92,54 +107,69 @@ export default function ClassmatesPage() {
         <p className={styles.subtitle}>See who&apos;s in your classes next year</p>
       </div>
 
-      {/* Course search */}
-      <div className={styles.searchSection}>
-        <div className={styles.searchBox}>
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-            <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
-          </svg>
-          <input
-            className={styles.searchInput}
-            placeholder="Search for a course…"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-          />
-          {search && (
-            <button className={styles.clearBtn} onClick={() => { setSearch(''); setSelectedCourse(''); }}>
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
-              </svg>
-            </button>
+      <div className={styles.filterBar}>
+        <div className={styles.searchSection}>
+          <div className={styles.searchBox}>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+            </svg>
+            <input
+              className={styles.searchInput}
+              placeholder="Search for a course…"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+            />
+            {(search || selectedCourse) && (
+              <button className={styles.clearBtn} onClick={() => { setSearch(''); setSelectedCourse(''); }}>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+                </svg>
+              </button>
+            )}
+          </div>
+
+          {search && !selectedCourse && (
+            <div className={styles.courseDropdown}>
+              {filteredCourses.slice(0, 20).map((c) => (
+                <button
+                  key={c.id}
+                  className={`${styles.courseItem}`}
+                  onClick={() => { setSelectedCourse(c.id); setSearch(c.name); }}
+                >
+                  <span className={styles.courseName}>{c.name}</span>
+                  <span className={styles.courseDept}>{c.department}</span>
+                </button>
+              ))}
+              {filteredCourses.length === 0 && (
+                <div className={styles.noResults}>No courses found</div>
+              )}
+            </div>
           )}
         </div>
 
-        {search && (
-          <div className={styles.courseDropdown}>
-            {filteredCourses.slice(0, 20).map((c) => (
-              <button
-                key={c.id}
-                className={`${styles.courseItem} ${selectedCourse === c.id ? styles.courseItemActive : ''}`}
-                onClick={() => { setSelectedCourse(c.id); setSearch(c.name); }}
-              >
-                <span className={styles.courseName}>{c.name}</span>
-                <span className={styles.courseDept}>{c.department}</span>
-              </button>
-            ))}
-            {filteredCourses.length === 0 && (
-              <div className={styles.noResults}>No courses found</div>
-            )}
-          </div>
-        )}
+        <div className={styles.semesterToggle}>
+          <button 
+            className={`${styles.semBtn} ${semester === 1 ? styles.semBtnActive : ''}`}
+            onClick={() => setSemester(1)}
+          >
+            Sem 1
+          </button>
+          <button 
+            className={`${styles.semBtn} ${semester === 2 ? styles.semBtnActive : ''}`}
+            onClick={() => setSemester(2)}
+          >
+            Sem 2
+          </button>
+        </div>
       </div>
 
-      {/* Results */}
       {selectedCourse && (
         <div className={styles.results}>
           <div className={styles.resultsHeader}>
             <div>
               <h2 className={styles.courseName2}>{course?.name}</h2>
               <p className={styles.resultCount}>
-                {searching ? 'Searching…' : `${classmates.length} classmate${classmates.length !== 1 ? 's' : ''} found`}
+                {searching ? 'Searching…' : `${classmates.length} classmate${classmates.length !== 1 ? 's' : ''} found in Semester ${semester}`}
               </p>
             </div>
           </div>
@@ -155,7 +185,7 @@ export default function ClassmatesPage() {
                 <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/>
                 <path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>
               </svg>
-              <p>No other students have enrolled in this course yet.</p>
+              <p>No other students in Semester {semester} have enrolled yet.</p>
               <span>Check back after more students add their schedules!</span>
             </div>
           ) : (
@@ -202,5 +232,13 @@ export default function ClassmatesPage() {
         </div>
       )}
     </div>
+  );
+}
+
+export default function ClassmatesPage() {
+  return (
+    <Suspense fallback={<div>Loading...</div>}>
+      <ClassmateContent />
+    </Suspense>
   );
 }

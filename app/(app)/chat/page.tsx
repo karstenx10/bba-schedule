@@ -14,6 +14,7 @@ interface Chat {
   name?: string;
   courseName?: string;
   block?: string;
+  semester?: number;
   participants?: string[];
   lastMessage?: string;
   lastMessageAt?: { toDate: () => Date } | null;
@@ -41,18 +42,18 @@ export default function ChatPage() {
 
     const load = async () => {
       // Load class chats the student is a member of
-      const memberSnaps = await Promise.all(
-        (await getDocs(query(collection(db, 'chats'), where('type', '==', 'class')))).docs
-      );
-
+      const chatSnap = await getDocs(query(collection(db, 'chats'), where('type', '==', 'class')));
+      
       const myClassChats: Chat[] = [];
-      for (const chatDoc of memberSnaps) {
+      for (const chatDoc of chatSnap.docs) {
         const memberRef = doc(db, 'chats', chatDoc.id, 'members', user.uid);
         const memberSnap = await getDoc(memberRef);
         if (memberSnap.exists()) {
           myClassChats.push({ id: chatDoc.id, ...chatDoc.data() } as Chat);
         }
       }
+      // Sort by semester then block
+      myClassChats.sort((a, b) => (a.semester || 1) - (b.semester || 1) || (a.block || '').localeCompare(b.block || ''));
       setClassChats(myClassChats);
 
       // Load DM chats
@@ -154,7 +155,10 @@ export default function ChatPage() {
                 </div>
                 <div className={styles.chatInfo}>
                   <span className={styles.chatName}>{chat.courseName}</span>
-                  <span className={styles.chatSub}>{chat.block} Block</span>
+                  <div className={styles.chatSub}>
+                    <span className="badge badge-green" style={{ fontSize: 9 }}>S{chat.semester}</span>
+                    <span>{chat.block} Block</span>
+                  </div>
                 </div>
               </Link>
             ))
