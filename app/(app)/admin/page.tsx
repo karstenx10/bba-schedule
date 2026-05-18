@@ -80,62 +80,14 @@ export default function AdminPage() {
     setAnnSending(true);
 
     try {
-      // Ensure admin bot user exists
-      const botRef = doc(db, 'users', 'admin-bot');
-      const botSnap = await getDoc(botRef);
-      if (!botSnap.exists()) {
-        await setDoc(botRef, {
-          uid: 'admin-bot',
-          displayName: 'Admin Announcement',
-          email: 'admin@burrburton.org',
-          grade: 'Admin',
-          photoURL: '',
-        });
-      }
-
-      // Determine targets
-      let targets = users;
-      if (annTarget === '9') targets = users.filter(u => u.grade === '9');
-      else if (annTarget === '10') targets = users.filter(u => u.grade === '10');
-      else if (annTarget === '11') targets = users.filter(u => u.grade === '11');
-      else if (annTarget === '12') targets = users.filter(u => u.grade === '12');
-      else if (annTarget !== 'all') targets = users.filter(u => u.uid === annTarget);
-
-      for (const target of targets) {
-        if (target.uid === 'admin-bot') continue;
-
-        // Check if DM exists
-        const dmQuery = query(collection(db, 'chats'), where('type', '==', 'dm'), where('participants', 'array-contains', target.uid));
-        const dmSnap = await getDocs(dmQuery);
-        let chatId = '';
-        
-        for (const doc of dmSnap.docs) {
-          if (doc.data().participants.includes('admin-bot')) {
-            chatId = doc.id;
-            break;
-          }
-        }
-
-        if (!chatId) {
-          const newChat = await addDoc(collection(db, 'chats'), {
-            type: 'dm',
-            participants: ['admin-bot', target.uid],
-            createdAt: serverTimestamp()
-          });
-          chatId = newChat.id;
-        }
-
-        await addDoc(collection(db, 'chats', chatId, 'messages'), {
-          uid: 'admin-bot',
-          displayName: 'Admin Announcement',
-          photoURL: '',
-          text: annMessage.trim(),
-          createdAt: serverTimestamp()
-        });
-      }
+      await addDoc(collection(db, 'announcements'), {
+        text: annMessage.trim(),
+        target: annTarget,
+        createdAt: serverTimestamp()
+      });
 
       setAnnMessage('');
-      alert('Announcement sent successfully!');
+      alert('Announcement sent globally!');
     } catch (err) {
       console.error(err);
       alert('Failed to send announcement');
@@ -271,7 +223,7 @@ export default function AdminPage() {
           <div className={styles.formGroup}>
             <label>Message</label>
             <textarea 
-              placeholder="Write your announcement here. It will be sent as a direct message from 'Admin Announcement'."
+              placeholder="Write your announcement here. It will appear as a banner at the top of the website for the selected users."
               value={annMessage}
               onChange={(e) => setAnnMessage(e.target.value)}
             />

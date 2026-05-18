@@ -44,6 +44,10 @@ service cloud.firestore {
           && request.resource.data.text.size() <= 2000;
         allow update, delete: if false;
       }
+    // Announcements: anyone can read, only admins can create
+    match /announcements/{id} {
+      allow read: if request.auth != null;
+      allow write: if isAdmin();
     }
   }
 }

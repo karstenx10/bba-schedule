@@ -38,3 +38,41 @@
 .footerLink:hover {
   color: var(--accent);
 }
+
+.banner {
+  background: var(--accent);
+  color: #000;
+  padding: 12px 24px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  position: relative;
+  z-index: 100;
+}
+
+.bannerText {
+  font-size: 14px;
+  font-weight: 600;
+  flex: 1;
+  text-align: center;
+}
+
+.bannerClose {
+  background: transparent;
+  border: none;
+  color: #000;
+  opacity: 0.6;
+  cursor: pointer;
+  padding: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: opacity 0.2s;
+  border-radius: 4px;
+}
+
+.bannerClose:hover {
+  opacity: 1;
+  background: rgba(0,0,0,0.1);
+}

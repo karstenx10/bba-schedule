@@ -23,6 +23,7 @@ interface UserProfile {
   isBanned?: boolean;
   timeoutUntil?: { toDate: () => Date } | null;
   forceLogout?: boolean;
+  dismissedAnnouncements?: string[];
 }
 
 interface AuthContextType {
