@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
-import { useParams, useRouter } from 'next/navigation';
+import { useSearchParams, useRouter } from 'next/navigation';
 import {
   doc, getDoc, collection, query, orderBy, onSnapshot,
   addDoc, serverTimestamp, limit, getDocs, setDoc
@@ -37,8 +37,9 @@ interface UserProfile {
   email: string;
 }
 
-export default function ChatRoomPage() {
-  const { chatId } = useParams<{ chatId: string }>();
+function ChatRoomContent() {
+  const searchParams = useSearchParams();
+  const chatId = searchParams.get('id');
   const { user, profile } = useAuth();
   const router = useRouter();
 
@@ -322,5 +323,13 @@ export default function ChatRoomPage() {
         </div>
       )}
     </div>
+  );
+}
+
+export default function ChatRoomPage() {
+  return (
+    <Suspense fallback={<div className="spinner" style={{ margin: '100px auto' }} />}>
+      <ChatRoomContent />
+    </Suspense>
   );
 }

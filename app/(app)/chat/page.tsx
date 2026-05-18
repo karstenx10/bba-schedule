@@ -106,7 +106,7 @@ export default function ChatPage() {
       participants: [user.uid, otherUid],
       createdAt: serverTimestamp(),
     });
-    window.location.href = `/chat/${ref.id}`;
+    window.location.href = `/chat-room?id=${ref.id}`;
   };
 
   const handleHideClassChat = async (e: React.MouseEvent, chatId: string) => {
@@ -168,7 +168,7 @@ export default function ChatPage() {
             </div>
           ) : (
             classChats.map((chat) => (
-              <Link key={chat.id} href={`/chat/${chat.id}`} className={styles.chatItem}>
+              <Link key={chat.id} href={`/chat-room?id=${chat.id}`} className={styles.chatItem}>
                 <div className={styles.chatItemInner}>
                   <div className={styles.chatAvatar} style={{ background: 'var(--green-600)' }}>
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -212,7 +212,7 @@ export default function ChatPage() {
               const otherUid = dm.participants?.find((p) => p !== user?.uid) ?? '';
               const partner = dmPartners[otherUid];
               return (
-                <Link key={dm.id} href={`/chat/${dm.id}`} className={styles.chatItem}>
+                <Link key={dm.id} href={`/chat-room?id=${dm.id}`} className={styles.chatItem}>
                   <div className={styles.chatItemInner}>
                     {partner?.photoURL ? (
                       <Image src={partner.photoURL} alt={partner.displayName} width={36} height={36} className={styles.chatAvatarImg} referrerPolicy="no-referrer" />

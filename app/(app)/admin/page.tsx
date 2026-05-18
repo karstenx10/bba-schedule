@@ -206,7 +206,7 @@ export default function AdminPage() {
                   <td>{c.block} Block</td>
                   <td>S{c.semester}</td>
                   <td>
-                    <Link href={`/chat/${c.id}`} className={styles.actionBtn}>View Chat</Link>
+                    <Link href={`/chat-room?id=${c.id}`} className={styles.actionBtn}>View Chat</Link>
                   </td>
                 </tr>
               ))}
