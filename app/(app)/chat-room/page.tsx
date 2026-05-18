@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, Suspense } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import {
   doc, getDoc, collection, query, orderBy, onSnapshot,
@@ -11,7 +11,7 @@ import { useAuth } from '@/context/AuthContext';
 import Image from 'next/image';
 import Link from 'next/link';
 import styles from './chatroom.module.css';
-import chatStyles from '../chat.module.css';
+import chatStyles from '../chat/chat.module.css';
 
 interface Message {
   id: string;
@@ -39,7 +39,7 @@ interface UserProfile {
 
 function ChatRoomContent() {
   const searchParams = useSearchParams();
-  const chatId = searchParams.get('id');
+  const chatId = searchParams.get('id') as string;
   const { user, profile } = useAuth();
   const router = useRouter();
 
