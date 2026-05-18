@@ -168,23 +168,26 @@
   left: 0;
   right: 0;
   bottom: 0;
-  background: rgba(0, 0, 0, 0.85);
-  backdrop-filter: blur(8px);
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  background: transparent;
   z-index: 1000;
+  pointer-events: none; /* Allows interacting with the app behind it */
 }
 
 .modalContent {
+  position: absolute;
+  bottom: 24px;
+  left: 24px;
   background: var(--bg-secondary);
   border: 1px solid var(--border);
-  padding: 40px;
-  width: 100vw;
-  height: 100vh;
+  border-radius: var(--radius-md);
+  padding: 20px;
+  width: 320px;
+  max-width: 90vw;
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 12px;
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.8);
+  pointer-events: auto; /* Re-enable clicks inside the box */
 }
 
 .modalContent h3 {
@@ -200,14 +203,14 @@
 
 .feedbackInput {
   width: 100%;
-  flex: 1;
-  padding: 16px;
+  padding: 12px;
   border-radius: var(--radius-sm);
   border: 1px solid var(--border);
   background: var(--bg-primary);
   color: var(--text-primary);
-  font-size: 16px;
-  resize: none;
+  font-size: 14px;
+  resize: vertical;
+  min-height: 120px;
 }
 
 .modalActions {
