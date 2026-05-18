@@ -147,6 +147,9 @@ export default function AdminPage() {
 
       {activeTab === 'users' && (
         <div className={styles.tableWrap}>
+          <div style={{ marginBottom: '16px', color: 'var(--text-secondary)', fontSize: '14px', fontWeight: '500' }}>
+            Total Users: <span style={{ color: 'var(--text-primary)', fontWeight: 'bold' }}>{users.length}</span>
+          </div>
           <table className={styles.table}>
             <thead>
               <tr>
