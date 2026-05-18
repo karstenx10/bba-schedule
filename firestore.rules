@@ -2,11 +2,15 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
+    function isAdmin() {
+      return request.auth != null && (request.auth.token.email == 'kolsen29@burrburton.org' || request.auth.token.email == 'ebuikema29@burrburton.org');
+    }
+
     // Users: anyone logged in can read all users (for classmate search/DM)
-    // Only you can write your own profile
+    // Only you can write your own profile, unless you are an admin
     match /users/{uid} {
       allow read: if request.auth != null;
-      allow write: if request.auth != null && request.auth.uid == uid;
+      allow write: if request.auth != null && (request.auth.uid == uid || isAdmin());
     }
 
     // Schedules: anyone logged in can read all schedules (classmate feature)
@@ -34,12 +38,18 @@ service cloud.firestore {
       match /messages/{msgId} {
         allow read: if request.auth != null;
         allow create: if request.auth != null
-          && request.auth.uid == request.resource.data.uid
+          && (request.auth.uid == request.resource.data.uid || isAdmin())
           && request.resource.data.text is string
           && request.resource.data.text.size() > 0
           && request.resource.data.text.size() <= 2000;
         allow update, delete: if false;
       }
+    }
+
+    // Announcements: anyone can read, only admins can create
+    match /announcements/{id} {
+      allow read: if request.auth != null;
+      allow write: if isAdmin();
     }
   }
 }
