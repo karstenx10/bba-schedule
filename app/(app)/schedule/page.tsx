@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { doc, getDoc, setDoc, serverTimestamp } from 'firebase/firestore';
+import { doc, getDoc, setDoc, serverTimestamp, deleteDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { useAuth } from '@/context/AuthContext';
 import { COURSES, DEPARTMENTS, getCourseById } from '@/lib/courses';
@@ -243,7 +243,9 @@ export default function SchedulePage() {
 
       for (const sem of sems) {
         const s = sem.sched;
-        const blockCourses = [
+        const oldS = sem.num === 1 ? savedData.semester1 : savedData.semester2;
+
+        const newBlockCourses = [
           { block: 'A', courseId: s.aBlock },
           { block: 'B', courseId: s.bBlock },
           { block: s.hasCDBlock ? 'CD' : 'C', courseId: s.hasCDBlock ? s.cdBlock : s.cBlock },
@@ -251,7 +253,26 @@ export default function SchedulePage() {
           { block: 'E', courseId: s.eBlock },
         ].filter(x => x.courseId);
 
-        for (const { block, courseId } of blockCourses) {
+        const oldBlockCourses = [
+          { block: 'A', courseId: oldS.aBlock },
+          { block: 'B', courseId: oldS.bBlock },
+          { block: oldS.hasCDBlock ? 'CD' : 'C', courseId: oldS.hasCDBlock ? oldS.cdBlock : oldS.cBlock },
+          ...(!oldS.hasCDBlock && oldS.dBlock ? [{ block: 'D', courseId: oldS.dBlock }] : []),
+          { block: 'E', courseId: oldS.eBlock },
+        ].filter(x => x.courseId);
+
+        // Remove from chats that were dropped
+        for (const oldItem of oldBlockCourses) {
+          const isStillInChat = newBlockCourses.some(
+            (newItem) => newItem.block === oldItem.block && newItem.courseId === oldItem.courseId
+          );
+          if (!isStillInChat) {
+            const oldChatId = `class_${oldItem.courseId}_${oldItem.block}_S${sem.num}`;
+            await deleteDoc(doc(db, 'chats', oldChatId, 'members', user.uid));
+          }
+        }
+
+        for (const { block, courseId } of newBlockCourses) {
           const chatId = `class_${courseId}_${block}_S${sem.num}`;
           const chatRef = doc(db, 'chats', chatId);
           const chatSnap = await getDoc(chatRef);

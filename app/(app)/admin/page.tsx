@@ -33,6 +33,7 @@ export default function AdminPage() {
   const [users, setUsers] = useState<UserProfile[]>([]);
   const [chats, setChats] = useState<Chat[]>([]);
   const [loading, setLoading] = useState(true);
+  const [chatSearch, setChatSearch] = useState('');
 
   // Announcement State
   const [annTarget, setAnnTarget] = useState('all'); // 'all', '9', '10', '11', '12', or specific uid
@@ -222,6 +223,16 @@ export default function AdminPage() {
 
       {activeTab === 'chats' && (
         <div className={styles.tableWrap}>
+          <div style={{ marginBottom: 16 }}>
+            <input 
+              type="text" 
+              placeholder="Search course name or block..." 
+              value={chatSearch}
+              onChange={(e) => setChatSearch(e.target.value)}
+              className={styles.searchInput}
+              style={{ width: '100%', padding: '8px', borderRadius: '4px', border: '1px solid var(--border-color)', background: 'var(--bg-secondary)', color: 'var(--text-primary)' }}
+            />
+          </div>
           <table className={styles.table}>
             <thead>
               <tr>
@@ -232,7 +243,12 @@ export default function AdminPage() {
               </tr>
             </thead>
             <tbody>
-              {chats.map(c => (
+              {chats
+                .filter(c => 
+                  c.courseName.toLowerCase().includes(chatSearch.toLowerCase()) || 
+                  c.block.toLowerCase().includes(chatSearch.toLowerCase())
+                )
+                .map(c => (
                 <tr key={c.id}>
                   <td><strong>{c.courseName}</strong></td>
                   <td>{c.block} Block</td>

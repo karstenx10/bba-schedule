@@ -59,7 +59,12 @@ function ClassmateContent() {
       const seen = new Set<string>();
       const semKey = `semester${semester}`;
 
-      for (const block of BLOCKS) {
+      const targetBlock = searchParams.get('block');
+      const blocksToSearch = targetBlock
+        ? BLOCKS.filter((b) => b.label.startsWith(targetBlock))
+        : BLOCKS;
+
+      for (const block of blocksToSearch) {
         // Query the nested semester object field
         const q = query(
           collection(db, 'schedules'),
