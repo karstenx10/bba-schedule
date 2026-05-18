@@ -34,6 +34,7 @@ interface UserProfile {
   uid: string;
   displayName: string;
   photoURL: string;
+  email: string;
 }
 
 export default function ChatRoomPage() {
