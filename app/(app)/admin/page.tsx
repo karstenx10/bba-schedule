@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import { useRouter } from 'next/navigation';
-import { collection, getDocs, doc, updateDoc, query, where, addDoc, serverTimestamp, setDoc, getDoc } from 'firebase/firestore';
+import { collection, getDocs, doc, updateDoc, query, where, addDoc, serverTimestamp, setDoc, getDoc, orderBy } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import styles from './admin.module.css';
 import Link from 'next/link';
@@ -25,13 +25,23 @@ interface Chat {
   semester: number;
 }
 
+interface Feedback {
+  id: string;
+  uid: string;
+  displayName: string;
+  text: string;
+  status: 'pending' | 'corrected' | 'flagged';
+  createdAt: any;
+}
+
 export default function AdminPage() {
   const { user, isAdmin, loading: authLoading } = useAuth();
   const router = useRouter();
 
-  const [activeTab, setActiveTab] = useState<'users' | 'chats' | 'announcements'>('users');
+  const [activeTab, setActiveTab] = useState<'users' | 'chats' | 'announcements' | 'feedback'>('users');
   const [users, setUsers] = useState<UserProfile[]>([]);
   const [chats, setChats] = useState<Chat[]>([]);
+  const [feedbackList, setFeedbackList] = useState<Feedback[]>([]);
   const [loading, setLoading] = useState(true);
   const [chatSearch, setChatSearch] = useState('');
 
@@ -53,6 +63,9 @@ export default function AdminPage() {
 
     const cSnap = await getDocs(query(collection(db, 'chats'), where('type', '==', 'class')));
     setChats(cSnap.docs.map(d => ({ id: d.id, ...d.data() } as Chat)));
+
+    const fSnap = await getDocs(query(collection(db, 'feedback'), orderBy('createdAt', 'desc')));
+    setFeedbackList(fSnap.docs.map(d => ({ id: d.id, ...d.data() } as Feedback)));
     
     setLoading(false);
   };
@@ -75,6 +88,11 @@ export default function AdminPage() {
     updateUser(uid, { timeoutUntil: tomorrow as any });
   };
   const handleUpdateGrade = (uid: string, grade: string) => updateUser(uid, { grade });
+
+  const handleFeedbackStatus = async (id: string, status: 'pending' | 'corrected' | 'flagged') => {
+    await updateDoc(doc(db, 'feedback', id), { status });
+    setFeedbackList(feedbackList.map(f => f.id === id ? { ...f, status } : f));
+  };
 
   const sendAnnouncement = async () => {
     if (!annMessage.trim() || annSending) return;
@@ -110,6 +128,7 @@ export default function AdminPage() {
         <button className={`${styles.tab} ${activeTab === 'users' ? styles.active : ''}`} onClick={() => setActiveTab('users')}>Users</button>
         <button className={`${styles.tab} ${activeTab === 'chats' ? styles.active : ''}`} onClick={() => setActiveTab('chats')}>Class Chats</button>
         <button className={`${styles.tab} ${activeTab === 'announcements' ? styles.active : ''}`} onClick={() => setActiveTab('announcements')}>Announcements</button>
+        <button className={`${styles.tab} ${activeTab === 'feedback' ? styles.active : ''}`} onClick={() => setActiveTab('feedback')}>User Feedback</button>
       </div>
 
       {activeTab === 'users' && (
@@ -251,6 +270,48 @@ export default function AdminPage() {
           >
             {annSending ? 'Sending...' : 'Send Announcement'}
           </button>
+        </div>
+      )}
+
+      {activeTab === 'feedback' && (
+        <div className={styles.tableWrap}>
+          <table className={styles.table}>
+            <thead>
+              <tr>
+                <th>User</th>
+                <th>Feedback</th>
+                <th>Status</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {feedbackList.map(f => (
+                <tr key={f.id}>
+                  <td><strong>{f.displayName}</strong></td>
+                  <td style={{ whiteSpace: 'pre-wrap', maxWidth: '400px' }}>{f.text}</td>
+                  <td>
+                    <span className={`${styles.status} ${f.status === 'corrected' ? styles.active : f.status === 'flagged' ? styles.banned : styles.timeout}`}>
+                      {f.status.charAt(0).toUpperCase() + f.status.slice(1)}
+                    </span>
+                  </td>
+                  <td>
+                    <select 
+                      className={styles.select} 
+                      value={f.status} 
+                      onChange={(e) => handleFeedbackStatus(f.id, e.target.value as any)}
+                    >
+                      <option value="pending">Pending</option>
+                      <option value="flagged">Flagged</option>
+                      <option value="corrected">Corrected</option>
+                    </select>
+                  </td>
+                </tr>
+              ))}
+              {feedbackList.length === 0 && (
+                <tr><td colSpan={4} style={{ textAlign: 'center', padding: 20 }}>No feedback yet.</td></tr>
+              )}
+            </tbody>
+          </table>
         </div>
       )}
     </div>

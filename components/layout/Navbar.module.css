@@ -141,6 +141,108 @@
   background: rgba(239,68,68,0.1);
 }
 
+.feedbackBtn {
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  color: var(--text-secondary);
+  padding: 6px 8px;
+  display: flex;
+  align-items: center;
+  transition: all var(--transition);
+  margin-right: 8px;
+  cursor: pointer;
+}
+
+.feedbackBtn:hover {
+  background: var(--bg-raised);
+  color: var(--text-primary);
+  border-color: var(--border-hover);
+}
+
+.modalOverlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.modalContent {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: 24px;
+  width: 90%;
+  max-width: 400px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.modalContent h3 {
+  margin: 0;
+  color: var(--text-primary);
+}
+
+.modalContent p {
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: 14px;
+}
+
+.feedbackInput {
+  width: 100%;
+  padding: 12px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  resize: vertical;
+  min-height: 100px;
+}
+
+.modalActions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  margin-top: 8px;
+}
+
+.cancelBtn {
+  padding: 8px 16px;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  border: 1px solid var(--border);
+  color: var(--text-secondary);
+  cursor: pointer;
+}
+
+.cancelBtn:hover {
+  background: var(--bg-raised);
+}
+
+.submitBtn {
+  padding: 8px 16px;
+  border-radius: var(--radius-sm);
+  background: var(--green-600);
+  border: none;
+  color: white;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.submitBtn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
 @media (max-width: 640px) {
   .logoLabel { display: none; }
   .userName { display: none; }

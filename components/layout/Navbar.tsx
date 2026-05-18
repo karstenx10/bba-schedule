@@ -1,8 +1,11 @@
 'use client';
 
 import Link from 'next/link';
+import { useState } from 'react';
 import { usePathname } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
+import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
+import { db } from '@/lib/firebase';
 import styles from './Navbar.module.css';
 import Image from 'next/image';
 
@@ -39,6 +42,30 @@ const NAV_LINKS = [
 export default function Navbar() {
   const pathname = usePathname();
   const { profile, isAdmin, signOut } = useAuth();
+  const [showFeedback, setShowFeedback] = useState(false);
+  const [feedbackText, setFeedbackText] = useState('');
+  const [submitting, setSubmitting] = useState(false);
+
+  const handleFeedbackSubmit = async () => {
+    if (!feedbackText.trim() || !profile) return;
+    setSubmitting(true);
+    try {
+      await addDoc(collection(db, 'feedback'), {
+        uid: profile.uid,
+        displayName: profile.displayName,
+        text: feedbackText.trim(),
+        status: 'pending',
+        createdAt: serverTimestamp(),
+      });
+      setShowFeedback(false);
+      setFeedbackText('');
+      alert('Feedback submitted! Thank you.');
+    } catch (err) {
+      console.error(err);
+      alert('Error submitting feedback.');
+    }
+    setSubmitting(false);
+  };
 
   return (
     <nav className={styles.nav}>
@@ -76,6 +103,12 @@ export default function Navbar() {
 
         {/* User */}
         <div className={styles.user}>
+          {/* Feedback Button */}
+          <button className={styles.feedbackBtn} onClick={() => setShowFeedback(true)} title="Send Feedback">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/>
+            </svg>
+          </button>
           {profile?.photoURL ? (
             <Image
               src={profile.photoURL}
@@ -100,6 +133,28 @@ export default function Navbar() {
           </button>
         </div>
       </div>
+
+      {showFeedback && (
+        <div className={styles.modalOverlay}>
+          <div className={styles.modalContent}>
+            <h3>Send Feedback</h3>
+            <p>Let us know about any bugs, concerns, or features you&apos;d like to see!</p>
+            <textarea
+              className={styles.feedbackInput}
+              value={feedbackText}
+              onChange={(e) => setFeedbackText(e.target.value)}
+              placeholder="Type your feedback here..."
+              rows={4}
+            />
+            <div className={styles.modalActions}>
+              <button className={styles.cancelBtn} onClick={() => setShowFeedback(false)} disabled={submitting}>Cancel</button>
+              <button className={styles.submitBtn} onClick={handleFeedbackSubmit} disabled={submitting || !feedbackText.trim()}>
+                {submitting ? 'Submitting...' : 'Submit'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </nav>
   );
 }
