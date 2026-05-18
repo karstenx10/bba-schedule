@@ -171,3 +171,31 @@
 .note strong {
   color: var(--accent);
 }
+
+.tosContainer {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  margin-bottom: 20px;
+  font-size: 13px;
+  color: var(--text-secondary);
+  line-height: 1.4;
+}
+
+.tosContainer input[type="checkbox"] {
+  margin-top: 3px;
+  accent-color: var(--green-400);
+  width: 16px;
+  height: 16px;
+  cursor: pointer;
+}
+
+.tosLink {
+  color: var(--accent);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.tosLink:hover {
+  color: var(--accent-hover);
+}

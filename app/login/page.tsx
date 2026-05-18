@@ -3,11 +3,13 @@
 import styles from './login.module.css';
 import { useAuth } from '@/context/AuthContext';
 import { useRouter } from 'next/navigation';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
+import Link from 'next/link';
 
 export default function LoginPage() {
   const { user, loading, signIn, error } = useAuth();
   const router = useRouter();
+  const [agreed, setAgreed] = useState(false);
 
   useEffect(() => {
     if (!loading && user) router.replace('/schedule');
@@ -49,10 +51,25 @@ export default function LoginPage() {
           </div>
         )}
 
+        <div className={styles.tosContainer}>
+          <input 
+            type="checkbox" 
+            id="tos" 
+            checked={agreed} 
+            onChange={(e) => setAgreed(e.target.checked)} 
+          />
+          <label htmlFor="tos">
+            I have read and agree to the{' '}
+            <Link href="/terms" className={styles.tosLink} target="_blank">Terms of Service</Link>
+            {' '}and{' '}
+            <Link href="/privacy" className={styles.tosLink} target="_blank">Privacy Policy</Link>.
+          </label>
+        </div>
+
         <button
           className={styles.googleBtn}
           onClick={signIn}
-          disabled={loading}
+          disabled={loading || !agreed}
         >
           {loading ? (
             <div className="spinner" style={{ width: 18, height: 18 }} />

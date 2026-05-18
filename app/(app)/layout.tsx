@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
 import Navbar from '@/components/layout/Navbar';
 import styles from './app-layout.module.css';
+import Link from 'next/link';
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   const { user, loading } = useAuth();
@@ -25,7 +26,14 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   return (
     <div className={styles.shell}>
       <Navbar />
-      <main className={styles.main}>{children}</main>
+      <main className={styles.main}>
+        {children}
+        <footer className={styles.footer}>
+          <Link href="/privacy" className={styles.footerLink} target="_blank">Privacy Policy</Link>
+          <span style={{ color: 'var(--text-muted)' }}>&bull;</span>
+          <Link href="/terms" className={styles.footerLink} target="_blank">Terms of Service</Link>
+        </footer>
+      </main>
     </div>
   );
 }
