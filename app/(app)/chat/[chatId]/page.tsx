@@ -4,13 +4,14 @@ import { useState, useEffect, useRef } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import {
   doc, getDoc, collection, query, orderBy, onSnapshot,
-  addDoc, serverTimestamp, limit
+  addDoc, serverTimestamp, limit, getDocs, setDoc
 } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { useAuth } from '@/context/AuthContext';
 import Image from 'next/image';
 import Link from 'next/link';
 import styles from './chatroom.module.css';
+import chatStyles from '../chat.module.css';
 
 interface Message {
   id: string;
@@ -46,6 +47,12 @@ export default function ChatRoomPage() {
   const [input, setInput] = useState('');
   const [sending, setSending] = useState(false);
   const [loading, setLoading] = useState(true);
+  
+  // Add Member State
+  const [showAddUser, setShowAddUser] = useState(false);
+  const [addSearch, setAddSearch] = useState('');
+  const [allUsers, setAllUsers] = useState<UserProfile[]>([]);
+
   const bottomRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
 
@@ -121,6 +128,34 @@ export default function ChatRoomPage() {
     ? `${chatInfo.courseName} — ${chatInfo.block} Block`
     : chatInfo?.name ?? 'Chat';
 
+  // Load all users for Add Member modal
+  useEffect(() => {
+    if (!showAddUser) return;
+    getDocs(collection(db, 'users')).then((snap) => {
+      setAllUsers(snap.docs.map((d) => d.data() as UserProfile).filter((u) => u.uid !== user?.uid));
+    });
+  }, [showAddUser, user]);
+
+  const addUserToClass = async (targetUid: string) => {
+    if (!chatId) return;
+    try {
+      await setDoc(doc(db, 'chats', chatId, 'members', targetUid), {
+        joinedAt: serverTimestamp()
+      });
+      setShowAddUser(false);
+      setAddSearch('');
+      alert('User successfully added to the class chat!');
+    } catch (err) {
+      console.error(err);
+      alert('Failed to add user to the chat.');
+    }
+  };
+
+  const filteredUsers = allUsers.filter((u) =>
+    u.displayName?.toLowerCase().includes(addSearch.toLowerCase()) ||
+    u.email?.toLowerCase().includes(addSearch.toLowerCase())
+  );
+
   // Group messages by sender for compact display
   const groupedMessages = messages.reduce<Array<{ msgs: Message[]; isMine: boolean }>>((acc, msg) => {
     const prev = acc[acc.length - 1];
@@ -170,6 +205,11 @@ export default function ChatRoomPage() {
             )}
           </div>
         </div>
+        {chatInfo?.type === 'class' && (
+          <button className="btn btn-ghost" style={{ padding: '6px 12px', fontSize: 13, marginLeft: 'auto' }} onClick={() => setShowAddUser(true)}>
+            + Add Member
+          </button>
+        )}
       </div>
 
       {/* Messages */}
@@ -234,6 +274,52 @@ export default function ChatRoomPage() {
           </svg>
         </button>
       </div>
+
+      {/* Add Member Modal */}
+      {showAddUser && (
+        <div className={chatStyles.modalOverlay} onClick={() => setShowAddUser(false)}>
+          <div className={chatStyles.modal} onClick={(e) => e.stopPropagation()}>
+            <div className={chatStyles.modalHeader}>
+              <h2>Add Member</h2>
+              <button className={chatStyles.modalClose} onClick={() => setShowAddUser(false)}>
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+                </svg>
+              </button>
+            </div>
+            <div className={chatStyles.modalSearchWrap}>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+              </svg>
+              <input
+                autoFocus
+                className={chatStyles.modalSearch}
+                placeholder="Search students…"
+                value={addSearch}
+                onChange={(e) => setAddSearch(e.target.value)}
+              />
+            </div>
+            <div className={chatStyles.userList}>
+              {filteredUsers.slice(0, 20).map((u) => (
+                <button key={u.uid} className={chatStyles.userItem} onClick={() => addUserToClass(u.uid)}>
+                  {u.photoURL ? (
+                    <Image src={u.photoURL} alt={u.displayName} width={36} height={36} className={chatStyles.chatAvatarImg} referrerPolicy="no-referrer" />
+                  ) : (
+                    <div className={chatStyles.chatAvatar}>{u.displayName?.[0] ?? '?'}</div>
+                  )}
+                  <div className={chatStyles.chatInfo}>
+                    <span className={chatStyles.chatName}>{u.displayName}</span>
+                    <span className={chatStyles.chatSub}>{u.email}</span>
+                  </div>
+                </button>
+              ))}
+              {filteredUsers.length === 0 && (
+                <div className={chatStyles.emptySection} style={{ padding: '24px' }}>No students found</div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

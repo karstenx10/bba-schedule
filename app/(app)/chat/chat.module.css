@@ -250,3 +250,41 @@
 }
 
 .userItem:hover { background: var(--bg-hover); }
+
+.chatItemInner {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex: 1;
+  min-width: 0;
+}
+
+.chatActions {
+  display: flex;
+  align-items: center;
+  opacity: 0;
+  transition: opacity 0.2s;
+  padding-left: 4px;
+}
+
+.chatItem:hover .chatActions {
+  opacity: 1;
+}
+
+.hideBtn {
+  background: transparent;
+  border: none;
+  color: var(--text-muted);
+  padding: 6px;
+  border-radius: 6px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+}
+
+.hideBtn:hover {
+  background: rgba(239, 68, 68, 0.15);
+  color: #f87171;
+}

@@ -7,8 +7,10 @@ import {
   signInWithPopup,
   signOut as firebaseSignOut,
 } from 'firebase/auth';
-import { doc, getDoc, setDoc, serverTimestamp } from 'firebase/firestore';
+import { doc, getDoc, setDoc, updateDoc, serverTimestamp, onSnapshot } from 'firebase/firestore';
 import { auth, db, googleProvider } from '@/lib/firebase';
+
+const ADMIN_EMAILS = ['kolsen29@burrburton.org', 'ebuikema29@burrburton.org'];
 
 interface UserProfile {
   uid: string;
@@ -17,11 +19,16 @@ interface UserProfile {
   photoURL: string;
   grade: string;
   createdAt?: unknown;
+  isAdmin?: boolean;
+  isBanned?: boolean;
+  timeoutUntil?: { toDate: () => Date } | null;
+  forceLogout?: boolean;
 }
 
 interface AuthContextType {
   user: User | null;
   profile: UserProfile | null;
+  isAdmin: boolean;
   loading: boolean;
   error: string | null;
   signIn: () => Promise<void>;
@@ -36,15 +43,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  const [isAdmin, setIsAdmin] = useState(false);
+
   useEffect(() => {
+    let profileUnsub: () => void;
+
     const unsub = onAuthStateChanged(auth, async (u) => {
       if (u) {
-        // Fetch or create profile
+        setUser(u);
         const ref = doc(db, 'users', u.uid);
+        
+        // Ensure profile exists first
         const snap = await getDoc(ref);
-        if (snap.exists()) {
-          setProfile(snap.data() as UserProfile);
-        } else {
+        if (!snap.exists()) {
           const newProfile: UserProfile = {
             uid: u.uid,
             email: u.email ?? '',
@@ -54,16 +65,51 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             createdAt: serverTimestamp(),
           };
           await setDoc(ref, newProfile);
-          setProfile(newProfile);
         }
-        setUser(u);
+
+        // Listen for real-time moderation updates
+        profileUnsub = onSnapshot(ref, async (docSnap) => {
+          if (docSnap.exists()) {
+            const data = docSnap.data() as UserProfile;
+            
+            // Moderation checks
+            let shouldLogout = false;
+            let logoutReason = '';
+
+            if (data.isBanned) {
+              shouldLogout = true;
+              logoutReason = 'Your account has been banned.';
+            } else if (data.timeoutUntil && data.timeoutUntil.toDate() > new Date()) {
+              shouldLogout = true;
+              logoutReason = `Your account is temporarily suspended until ${data.timeoutUntil.toDate().toLocaleString()}.`;
+            } else if (data.forceLogout) {
+              shouldLogout = true;
+              logoutReason = 'You have been kicked by an admin.';
+              await updateDoc(ref, { forceLogout: false });
+            }
+
+            if (shouldLogout) {
+              await firebaseSignOut(auth);
+              setError(logoutReason);
+              return;
+            }
+
+            setProfile(data);
+            setIsAdmin(ADMIN_EMAILS.includes(data.email ?? ''));
+          }
+        });
       } else {
         setUser(null);
         setProfile(null);
+        setIsAdmin(false);
+        if (profileUnsub) profileUnsub();
       }
       setLoading(false);
     });
-    return () => unsub();
+    return () => {
+      unsub();
+      if (profileUnsub) profileUnsub();
+    };
   }, []);
 
   const signIn = async () => {
@@ -86,7 +132,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   return (
-    <AuthContext.Provider value={{ user, profile, loading, error, signIn, signOut }}>
+    <AuthContext.Provider value={{ user, profile, isAdmin, loading, error, signIn, signOut }}>
       {children}
     </AuthContext.Provider>
   );
