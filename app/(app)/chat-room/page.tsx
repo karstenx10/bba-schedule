@@ -4,7 +4,7 @@ import { useState, useEffect, useRef, Suspense } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import {
   doc, getDoc, collection, query, orderBy, onSnapshot,
-  addDoc, serverTimestamp, limit, getDocs, setDoc
+  addDoc, serverTimestamp, limit, getDocs, setDoc, updateDoc
 } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { useAuth } from '@/context/AuthContext';
@@ -40,7 +40,7 @@ interface UserProfile {
 function ChatRoomContent() {
   const searchParams = useSearchParams();
   const chatId = searchParams.get('id') as string;
-  const { user, profile } = useAuth();
+  const { user, profile, isAdmin } = useAuth();
   const router = useRouter();
 
   const [chatInfo, setChatInfo] = useState<ChatInfo | null>(null);
@@ -67,10 +67,33 @@ function ChatRoomContent() {
       setChatInfo(info);
 
       if (info.type === 'dm') {
-        const otherUid = info.participants?.find((p) => p !== user.uid);
-        if (otherUid) {
-          const pSnap = await getDoc(doc(db, 'users', otherUid));
-          if (pSnap.exists()) setDmPartner(pSnap.data() as UserProfile);
+        const isParticipant = info.participants?.includes(user.uid);
+        if (isParticipant) {
+          const otherUid = info.participants?.find((p) => p !== user.uid);
+          if (otherUid) {
+            const pSnap = await getDoc(doc(db, 'users', otherUid));
+            if (pSnap.exists()) setDmPartner(pSnap.data() as UserProfile);
+          }
+        } else {
+          // Admin viewing a DM they are not part of
+          const p1Uid = info.participants?.[0];
+          const p2Uid = info.participants?.[1];
+          let p1Name = 'Unknown';
+          let p2Name = 'Unknown';
+          if (p1Uid) {
+            const p1Snap = await getDoc(doc(db, 'users', p1Uid));
+            if (p1Snap.exists()) p1Name = (p1Snap.data() as UserProfile).displayName;
+          }
+          if (p2Uid) {
+            const p2Snap = await getDoc(doc(db, 'users', p2Uid));
+            if (p2Snap.exists()) p2Name = (p2Snap.data() as UserProfile).displayName;
+          }
+          setDmPartner({
+            uid: 'admin-view',
+            displayName: `${p1Name} & ${p2Name}`,
+            photoURL: '',
+            email: ''
+          });
         }
       }
       setLoading(false);
@@ -108,6 +131,13 @@ function ChatRoomContent() {
         photoURL: profile.photoURL ?? '',
         text,
         createdAt: serverTimestamp(),
+      });
+      // Update parent chat metadata with latest message info
+      await updateDoc(doc(db, 'chats', chatId), {
+        lastMessageText: text,
+        lastMessageSenderName: profile.displayName,
+        lastMessageSenderUid: user.uid,
+        lastMessageAt: serverTimestamp()
       });
     } catch (err) {
       console.error(err);
