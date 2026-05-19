@@ -70,7 +70,11 @@ export default function AdminPage() {
   // Dashboard & Logs State
   const [logs, setLogs] = useState<SystemLog[]>([]);
   const [schedulesCount, setSchedulesCount] = useState(0);
-  const [completedUids, setCompletedUids] = useState<string[]>([]);
+  interface CompletedScheduleInfo {
+    uid: string;
+    updatedAt: Date | null;
+  }
+  const [completedSchedules, setCompletedSchedules] = useState<CompletedScheduleInfo[]>([]);
 
   // Interactive CLI Console state
   const [cmdValue, setCmdValue] = useState('');
@@ -124,11 +128,15 @@ export default function AdminPage() {
       setLogs(snap.docs.map(d => ({ id: d.id, ...d.data() } as SystemLog)));
     });
 
-    // Real-time subscription to schedules completed count & uids
+    // Real-time subscription to schedules completed count & info
     const schedQuery = collection(db, 'schedules');
     const unsubSched = onSnapshot(schedQuery, (snap) => {
       setSchedulesCount(snap.size);
-      setCompletedUids(snap.docs.map(doc => doc.id));
+      setCompletedSchedules(snap.docs.map(doc => {
+        const data = doc.data();
+        const updatedAt = data.updatedAt?.toDate ? data.updatedAt.toDate() : null;
+        return { uid: doc.id, updatedAt };
+      }));
     });
 
     return () => {
@@ -161,12 +169,40 @@ export default function AdminPage() {
     const cleanCmd = cmd.toLowerCase();
 
     if (cleanCmd === 'help') {
-      outputMsg = 'Available commands:\n  help      - Display this help information menu.\n  completed - List all students who have completed their schedules.\n  users     - Show count of registered schedule profiles.\n  clear     - Clear custom logs and reset console view.';
-    } else if (cleanCmd === 'completed') {
-      const completedUsers = users.filter(u => completedUids.includes(u.uid));
-      if (completedUsers.length > 0) {
-        outputMsg = `Completed schedules (${completedUsers.length}):\n` + 
-          completedUsers.map((u, i) => `  ${i + 1}. ${u.displayName} (${u.email}) [Grade: ${u.grade || 'N/A'}]`).join('\n');
+      outputMsg = 'Available commands:\n  help      - Display this help information menu.\n  completed - List completed schedules chronologically (beginning to end).\n  recent    - List completed schedules reverse-chronologically (most recent first).\n  users     - Show count of registered schedule profiles.\n  clear     - Clear custom logs and reset console view.';
+    } else if (cleanCmd === 'completed' || cleanCmd === 'recent') {
+      const enriched = users
+        .map(u => {
+          const schedInfo = completedSchedules.find(s => s.uid === u.uid);
+          return schedInfo ? { ...u, completedAt: schedInfo.updatedAt } : null;
+        })
+        .filter((u): u is UserProfile & { completedAt: Date | null } => u !== null);
+
+      if (cleanCmd === 'recent') {
+        // Sort reverse-chronologically from end (latest) to beginning (earliest)
+        enriched.sort((a, b) => {
+          if (!a.completedAt) return 1;
+          if (!b.completedAt) return -1;
+          return b.completedAt.getTime() - a.completedAt.getTime();
+        });
+      } else {
+        // Sort chronologically from beginning (earliest) to end (latest)
+        enriched.sort((a, b) => {
+          if (!a.completedAt) return 1;
+          if (!b.completedAt) return -1;
+          return a.completedAt.getTime() - b.completedAt.getTime();
+        });
+      }
+
+      if (enriched.length > 0) {
+        const orderStr = cleanCmd === 'recent' ? 'Most Recent First' : 'Beginning to End';
+        outputMsg = `Completed schedules (${enriched.length}) - [Sorted: ${orderStr}]:\n` + 
+          enriched.map((u, i) => {
+            const timeStr = u.completedAt 
+              ? u.completedAt.toLocaleString() 
+              : 'Unknown Time';
+            return `  ${i + 1}. ${u.displayName} (${u.email}) [Grade: ${u.grade || 'N/A'}] - Completed: ${timeStr}`;
+          }).join('\n');
       } else {
         outputMsg = 'No students have completed schedules yet.';
       }
