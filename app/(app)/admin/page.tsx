@@ -415,8 +415,22 @@ export default function AdminPage() {
       setFeedbackList(feedbackList.filter(f => f.id !== id));
       return;
     }
+
+    const feedbackItem = feedbackList.find(f => f.id === id);
+    const wasAlreadyCorrected = feedbackItem?.status === 'corrected';
+
     await updateDoc(doc(db, 'feedback', id), { status });
     setFeedbackList(feedbackList.map(f => f.id === id ? { ...f, status } : f));
+
+    if (status === 'corrected' && !wasAlreadyCorrected && feedbackItem) {
+      await addDoc(collection(db, 'announcements'), {
+        text: `An admin has marked your feedback as corrected: "${feedbackItem.text.length > 50 ? feedbackItem.text.substring(0, 50) + '...' : feedbackItem.text}"`,
+        target: feedbackItem.uid,
+        type: 'update',
+        viewable: true,
+        createdAt: serverTimestamp()
+      });
+    }
   };
 
   const sendAnnouncement = async () => {
