@@ -103,6 +103,7 @@ export default function AdminPage() {
   const [annTarget, setAnnTarget] = useState('all'); // 'all', '9', '10', '11', '12', or specific uid
   const [annMessage, setAnnMessage] = useState('');
   const [annSending, setAnnSending] = useState(false);
+  const [editingAnnId, setEditingAnnId] = useState<string | null>(null);
 
   useEffect(() => {
     if (!authLoading && !isAdmin) {
@@ -342,21 +343,49 @@ export default function AdminPage() {
     setAnnSending(true);
 
     try {
-      await addDoc(collection(db, 'announcements'), {
-        text: annMessage.trim(),
-        target: annTarget,
-        type: annType,
-        viewable: true,
-        createdAt: serverTimestamp()
-      });
+      if (editingAnnId) {
+        // Update existing announcement
+        await updateDoc(doc(db, 'announcements', editingAnnId), {
+          text: annMessage.trim(),
+          target: annTarget,
+          type: annType
+        });
+        setEditingAnnId(null);
+        alert('Announcement updated successfully!');
+      } else {
+        // Create new announcement
+        await addDoc(collection(db, 'announcements'), {
+          text: annMessage.trim(),
+          target: annTarget,
+          type: annType,
+          viewable: true,
+          createdAt: serverTimestamp()
+        });
+        alert('Announcement sent successfully!');
+      }
 
       setAnnMessage('');
-      alert('Announcement sent successfully!');
+      setAnnTarget('all');
+      setAnnType('announcement');
     } catch (err) {
       console.error(err);
-      alert('Failed to send announcement');
+      alert(editingAnnId ? 'Failed to update announcement' : 'Failed to send announcement');
     }
     setAnnSending(false);
+  };
+
+  const startEditingAnnouncement = (ann: Announcement) => {
+    setEditingAnnId(ann.id);
+    setAnnTarget(ann.target);
+    setAnnType(ann.type || 'announcement');
+    setAnnMessage(ann.text);
+  };
+
+  const cancelEditingAnnouncement = () => {
+    setEditingAnnId(null);
+    setAnnTarget('all');
+    setAnnType('announcement');
+    setAnnMessage('');
   };
 
   const toggleAnnouncementVisibility = async (id: string, currentViewable: boolean) => {
@@ -704,7 +733,7 @@ export default function AdminPage() {
         <div className={styles.announcementDashboard}>
           {/* Create Announcement Form */}
           <div className={styles.announcementForm} style={{ maxWidth: '100%' }}>
-            <h2 style={{ marginBottom: 16 }}>Send Announcement</h2>
+            <h2 style={{ marginBottom: 16 }}>{editingAnnId ? 'Edit Announcement' : 'Send Announcement'}</h2>
             
             <div className={styles.formGroup}>
               <label>Target Audience</label>
@@ -746,8 +775,17 @@ export default function AdminPage() {
               disabled={!annMessage.trim() || annSending}
               style={{ width: '100%' }}
             >
-              {annSending ? 'Sending...' : 'Send Announcement'}
+              {annSending ? 'Saving...' : editingAnnId ? 'Update Announcement' : 'Send Announcement'}
             </button>
+            {editingAnnId && (
+              <button 
+                className={styles.actionBtn}
+                onClick={cancelEditingAnnouncement}
+                style={{ width: '100%', marginTop: '8px', padding: '10px' }}
+              >
+                Cancel Edit
+              </button>
+            )}
           </div>
 
           {/* Announcements Tally Table */}
@@ -810,6 +848,12 @@ export default function AdminPage() {
                       </td>
                       <td>
                         <div className={styles.actions}>
+                          <button 
+                            className={styles.actionBtn}
+                            onClick={() => startEditingAnnouncement(ann)}
+                          >
+                            Edit
+                          </button>
                           <button 
                             className={styles.actionBtn}
                             onClick={() => toggleAnnouncementVisibility(ann.id, isViewable)}
