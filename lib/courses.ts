@@ -201,3 +201,93 @@ export function getCourseById(id: string): Course | undefined {
 export function getCoursesByDepartment(dept: string): Course[] {
   return COURSES.filter((c) => c.department === dept);
 }
+
+export interface Teacher {
+  name: string;
+  email: string;
+  role?: string;
+  departments: string[];
+}
+
+export const TEACHERS: Teacher[] = [
+  { name: 'Nicole Abetti', email: 'nabetti@burrburton.org', role: 'English Teacher, International Dorms', departments: ['English'] },
+  { name: 'Rebecca Allen', email: 'rlallen@burrburton.org', role: 'Science Teacher', departments: ['Science'] },
+  { name: 'Emily Bazan', email: 'ebazan@burrburton.org', role: 'Dance Teacher', departments: ['Creative Arts: Media & Performing'] },
+  { name: 'Elpi Blanchard', email: 'eblanchard@burrburton.org', role: 'Science Teacher, Science Dept. Co-Chair', departments: ['Science'] },
+  { name: 'Katie Bove', email: 'kbove@burrburton.org', role: 'Spanish Teacher, World Languages Dept. Chair', departments: ['World Languages'] },
+  { name: 'Jennifer Bowen', email: 'jbowen@burrburton.org', role: 'World Language and Culture teacher/French', departments: ['World Languages'] },
+  { name: 'Hakan Brosnan', email: 'hbrosnan@burrburton.org', role: 'Visual Arts Teacher', departments: ['Creative Arts: Visual & Design'] },
+  { name: 'Ollie Brown', email: 'obrown@burrburton.org', role: 'STEM Integrationist', departments: ['CS & Engineering', 'Science', 'Mathematics'] },
+  { name: 'Laura Callen', email: 'lcallen@burrburton.org', role: 'Humanities Teacher', departments: ['English', 'Social Studies'] },
+  { name: 'Mike Caraco', email: 'mcaraco@burrburton.org', role: 'Dean of Faculty, Math Teacher', departments: ['Mathematics'] },
+  { name: 'Isabella Carrabino', email: 'icarrabino@burrburton.org', role: 'Math Teacher', departments: ['Mathematics'] },
+  { name: 'Andrew Cassarino', email: 'acassarino@burrburton.org', role: 'Humanities Teacher', departments: ['English', 'Social Studies'] },
+  { name: 'Toure Christie', email: 'tchristie@burrburton.org', role: 'Physical Education Teacher', departments: ['PE & Wellness'] },
+  { name: 'Scott Clausen', email: 'sclausen@burrburton.org', role: 'English Teacher', departments: ['English'] },
+  { name: 'Rabbi Michael Cohen', email: 'mcohen@burrburton.org', role: 'Rabbi', departments: ['Social Studies', 'English'] },
+  { name: 'Thom Collins', email: 'tcollins@burrburton.org', role: 'Science Teacher', departments: ['Science'] },
+  { name: 'Cheryl Cornwell', email: 'ccornwell@burrburton.org', role: 'English Teacher', departments: ['English'] },
+  { name: 'Mrs. Kelly Cray', email: 'kcray@burrburton.org', role: 'Cultural & Language Support Teacher', departments: ['English', 'World Languages'] },
+  { name: 'Julie Crosier', email: 'jcrosier@burrburton.org', role: 'Physical Education Teacher, Assistant Athletic Director', departments: ['PE & Wellness'] },
+  { name: 'Nick Exler', email: 'nexler@burrburton.org', role: 'Music Teacher', departments: ['Creative Arts: Media & Performing'] },
+  { name: 'Julie Freebern', email: 'jfreebern@burrburton.org', role: 'Music Teacher', departments: ['Creative Arts: Media & Performing'] },
+  { name: 'Hal Friday', email: 'hfriday@burrburton.org', role: 'Humanities Teacher', departments: ['English', 'Social Studies'] },
+  { name: 'Kerri Friday', email: 'kfriday@burrburton.org', role: 'Humanities Teacher', departments: ['English', 'Social Studies'] },
+  { name: 'Megan Gault', email: 'mgault@burrburton.org', role: 'Math Teacher, Math Dept. Chair', departments: ['Mathematics'] },
+  { name: 'Mr. John Graf III', email: 'jgraf@burrburton.org', role: 'Social Studies Teacher, Social Studies Dept. Chair', departments: ['Social Studies'] },
+  { name: 'Garrett Hall', email: 'ghall@burrburton.org', role: 'Science Teacher', departments: ['Science'] },
+  { name: 'Jon Hammond', email: 'jhammond@burrburton.org', role: 'Athletic and Mountain Campus Advisor', departments: ['Flexible Pathways'] },
+  { name: 'Jessica Handler', email: 'jhandler@burrburton.org', role: 'Math Teacher', departments: ['Mathematics'] },
+  { name: 'Erin Harris', email: 'eharris@burrburton.org', role: 'Wellness Teacher', departments: ['PE & Wellness'] },
+  { name: 'Dr. Sarah Harris', email: 'sharris@burrburton.org', role: 'Spanish Teacher', departments: ['World Languages'] },
+  { name: 'Nora Hefner', email: 'nhefner@burrburton.org', role: 'Science Teacher, Food and Farm Systems Coordinator', departments: ['Science', 'Farm & Food Studies'] },
+  { name: 'Cory Herrington', email: 'cherrington@burrburton.org', role: 'Director of Enrollment and Admissions', departments: ['Flexible Pathways'] },
+  { name: 'Andrea Hogan', email: 'ahogan@burrburton.org', role: 'School Counselor', departments: ['Flexible Pathways'] },
+  { name: 'Jen Hyatt', email: 'jhyatt@burrburton.org', role: 'Academic Dean', departments: ['Flexible Pathways'] },
+  { name: 'Karyn Jackson', email: 'kjackson@burrburton.org', role: 'Math Teacher', departments: ['Mathematics'] },
+  { name: 'Ms. Jillian Joyce', email: 'jjoyce@burrburton.org', role: 'Social Studies Teacher', departments: ['Social Studies'] },
+  { name: 'Kristen Kimball', email: 'kkimball@burrburton.org', role: 'School Counselor, School Counseling Dept. Chair', departments: ['Flexible Pathways'] },
+  { name: 'Cori Klein', email: 'cklein@burrburton.org', role: 'Design Space Assistant', departments: ['Creative Arts: Visual & Design', 'CS & Engineering'] },
+  { name: 'Tom Klein', email: 'tklein@burrburton.org', role: 'Social Studies Teacher', departments: ['Social Studies'] },
+  { name: 'Emily Kohler', email: 'ekohler@burrburton.org', role: 'Program Coordinator for School Counseling and Enrollment', departments: ['Flexible Pathways'] },
+  { name: 'Abby Lalor', email: 'alalor@burrburton.org', role: 'Library Assistant', departments: ['Flexible Pathways'] },
+  { name: 'Jacque Lewicki', email: 'jlewicki@burrburton.org', role: 'Registrar', departments: ['Flexible Pathways'] },
+  { name: 'Kristi Lewicki', email: 'klewicki@burrburton.org', role: 'Multi-Tiered Systems of Support (MTSS) Coordinator', departments: ['Flexible Pathways'] },
+  { name: 'Anharad Llewelyn', email: 'allewelyn@burrburton.org', role: 'Visual Arts Teacher', departments: ['Creative Arts: Visual & Design'] },
+  { name: 'Ms. Julie McGraw', email: 'jMcGraw@burrburton.org', role: 'Physical Education Teacher, Physical Education Dept. Chair', departments: ['PE & Wellness'] },
+  { name: 'Barb Miceli', email: 'bmiceli@burrburton.org', role: 'German Teacher', departments: ['World Languages'] },
+  { name: 'Dave Miceli', email: 'dmiceli@burrburton.org', role: 'Athletic Director', departments: ['PE & Wellness'] },
+  { name: 'Melissa Michaud', email: 'mmichaud@burrburton.org', role: 'School Counselor', departments: ['Flexible Pathways'] },
+  { name: 'Paul Molinelli', email: 'pmolinelli@burrburton.org', role: 'Design, Arts Integration, Design Space Coordinator, Technical Theater', departments: ['Creative Arts: Visual & Design', 'Creative Arts: Media & Performing', 'CS & Engineering'] },
+  { name: 'Kevin Morrison', email: 'kmorrison@burrburton.org', role: 'Media Arts Teacher, Media & Performing Arts Dept. Chair', departments: ['Creative Arts: Media & Performing'] },
+  { name: 'Jonathan Mowry', email: 'jmowry@burrburton.org', role: 'Woodworking & Design Teacher', departments: ['Creative Arts: Visual & Design'] },
+  { name: 'Joe Mundt', email: 'jmundt@burrburton.org', role: 'Math Teacher', departments: ['Mathematics'] },
+  { name: 'Ms Amy Newbold', email: 'anewbold@burrburton.org', role: 'Science Teacher', departments: ['Science'] },
+  { name: 'Mr. Pete Nicholson', email: 'pnicholson@burrburton.org', role: 'English Teacher', departments: ['English'] },
+  { name: 'Jill Perry-Balzano', email: 'jperrybalzano@burrburton.org', role: 'Director of Communications', departments: ['Flexible Pathways'] },
+  { name: 'Sean Powers', email: 'spowers@burrburton.org', role: 'Visual Arts Teacher', departments: ['Creative Arts: Visual & Design'] },
+  { name: 'Nicole Preiser', email: 'npreiser@burrburton.org', role: 'Science Teacher, Science Dept. Co-Chair', departments: ['Science'] },
+  { name: 'Margi Putney', email: 'mputney@burrburton.org', role: 'Media and Library Specialist', departments: ['Flexible Pathways'] },
+  { name: 'James Raposa', email: 'jraposa@burrburton.org', role: 'Director of Drama, Dance, and Tech Theater', departments: ['Creative Arts: Media & Performing'] },
+  { name: 'John Roche', email: 'jroche@burrburton.org', role: 'Cinematography Teacher', departments: ['Creative Arts: Media & Performing'] },
+  { name: 'Ms. Cristin Rose', email: 'crose@burrburton.org', role: 'School Counselor', departments: ['Flexible Pathways'] },
+  { name: 'Katy Schonbeck', email: 'kschonbeck@burrburton.org', role: 'Math Teacher', departments: ['Mathematics'] },
+  { name: 'Ms. Kim Shaw', email: 'kshaw@burrburton.org', role: 'Spanish Teacher', departments: ['World Languages'] },
+  { name: 'Bea Smith', email: 'bsmith@burrburton.org', role: 'Staff', departments: ['Flexible Pathways'] },
+  { name: 'Nancy Strain', email: 'nstrain@burrburton.org', role: 'English Teacher, English Dept. Chair', departments: ['English'] },
+  { name: 'Eric Strebel', email: 'estrebel@burrburton.org', role: 'Humanities Teacher', departments: ['English', 'Social Studies'] },
+  { name: 'Kelsey Towslee', email: 'ktowslee@burrburton.org', role: 'Athletic Trainer', departments: ['PE & Wellness'] },
+  { name: 'Kelly Travis', email: 'ktravis@burrburton.org', role: 'Math Teacher', departments: ['Mathematics'] },
+  { name: 'Alexander Vincent', email: 'avincent@burrburton.org', role: 'Graphic Design and Photography Teacher', departments: ['Creative Arts: Visual & Design'] },
+  { name: 'Melanie Virgilio', email: 'mvirgilio@burrburton.org', role: 'Visual Arts Teacher', departments: ['Creative Arts: Visual & Design'] },
+  { name: 'Thomas von Allmen', email: 'tvonallmen@burrburton.org', role: 'Social Studies Teacher', departments: ['Social Studies'] },
+  { name: 'Mr. Jonathan Wilson', email: 'jwilson@burrburton.org', role: 'Social Studies Teacher', departments: ['Social Studies'] },
+  { name: 'Madison Wilson', email: 'mwilson@burrburton.org', role: 'Staff', departments: ['Flexible Pathways'] },
+  { name: 'Ms. Amy Wright', email: 'awright@burrburton.org', role: 'Director of Technology', departments: ['CS & Engineering', 'Flexible Pathways'] },
+  { name: 'Patrick Zilkha', email: 'Pzilkha@burrburton.org', role: 'Math Teacher', departments: ['Mathematics'] },
+];
+
+export function getTeachersByDepartment(dept: string): Teacher[] {
+  return TEACHERS.filter((t) => t.departments.includes(dept));
+}
+

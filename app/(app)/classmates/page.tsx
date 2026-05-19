@@ -4,7 +4,11 @@ import { useState, useEffect, Suspense } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { collection, getDocs, query, where, doc, getDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
+<<<<<<< HEAD
 import { getCourseById } from '@/lib/courses';
+=======
+import { COURSES, getCourseById, TEACHERS } from '@/lib/courses';
+>>>>>>> 0f439d93ec2c82409ab2a9bdb34adea69de8d9ec
 import { useAuth } from '@/context/AuthContext';
 import Image from 'next/image';
 import Link from 'next/link';
@@ -22,6 +26,8 @@ interface UserProfile {
 interface ClassmateResult {
   profile: UserProfile;
   block: string;
+  teacherEmail: string;
+  teacherName: string;
 }
 
 interface SemesterSchedule {
@@ -101,8 +107,14 @@ function ClassmateContent() {
   const [semester, setSemester] = useState<1 | 2>(urlSemester === 2 ? 2 : 1);
   const [classmates, setClassmates] = useState<ClassmateResult[]>([]);
   const [searching, setSearching] = useState(false);
+<<<<<<< HEAD
   const [scheduleData, setScheduleData] = useState<ScheduleDoc | null>(null);
   const [loadingSchedule, setLoadingSchedule] = useState(true);
+=======
+  const [search, setSearch] = useState('');
+  const [selectedTeacherFilter, setSelectedTeacherFilter] = useState('all');
+  const [mySchedule, setMySchedule] = useState<any>(null);
+>>>>>>> 0f439d93ec2c82409ab2a9bdb34adea69de8d9ec
 
   // Sync state with URL changes
   useEffect(() => {
@@ -116,6 +128,13 @@ function ClassmateContent() {
         setScheduleData(snap.data() as ScheduleDoc);
       }
       setLoadingSchedule(false);
+    });
+  }, [user]);
+
+  useEffect(() => {
+    if (!user) return;
+    getDoc(doc(db, 'schedules', user.uid)).then((snap) => {
+      if (snap.exists()) setMySchedule(snap.data());
     });
   }, [user]);
 
@@ -150,22 +169,79 @@ function ClassmateContent() {
 
           const profileSnap = await getDoc(doc(db, 'users', uid));
           if (profileSnap.exists()) {
+            const schedData = schedDoc.data() as any;
+            const teacherEmail = schedData[semKey]?.[`${block.key}Teacher`] || '';
+            const teacherObj = TEACHERS.find((t) => t.email === teacherEmail);
+            const teacherName = teacherObj ? teacherObj.name : teacherEmail ? 'Unknown Teacher' : 'No Teacher Selected';
+
             results.push({
               profile: profileSnap.data() as UserProfile,
               block: block.label,
+              teacherEmail,
+              teacherName,
             });
           }
         }
       }
 
       setClassmates(results);
+      setSelectedTeacherFilter('all');
       setSearching(false);
     };
 
     findClassmates();
   }, [selectedCourse, semester, user, searchParams]);
+<<<<<<< HEAD
+=======
+
+  // Set search text if course is pre-selected via URL
+  useEffect(() => {
+    const courseId = searchParams.get('courseId');
+    if (courseId) {
+      const c = getCourseById(courseId);
+      if (c) setSearch(c.name);
+    }
+  }, [searchParams]);
+>>>>>>> 0f439d93ec2c82409ab2a9bdb34adea69de8d9ec
 
   const course = getCourseById(selectedCourse);
+
+  const getMyTeacherForCourse = () => {
+    if (!mySchedule) return '';
+    const semKey = `semester${semester}`;
+    const semSched = mySchedule[semKey];
+    if (!semSched) return '';
+
+    const blockKeys = ['aBlock', 'bBlock', 'cBlock', 'cdBlock', 'dBlock', 'eBlock'];
+    for (const bk of blockKeys) {
+      if (semSched[bk] === selectedCourse) {
+        return semSched[`${bk}Teacher`] || '';
+      }
+    }
+    return '';
+  };
+
+  const myTeacherEmail = getMyTeacherForCourse();
+  const myTeacherObj = TEACHERS.find((t) => t.email === myTeacherEmail);
+  const myTeacherName = myTeacherObj ? myTeacherObj.name : '';
+
+  const uniqueTeachersInResults = Array.from(
+    new Set(
+      classmates
+        .map((c) => c.teacherEmail)
+        .filter((email): email is string => !!email)
+    )
+  );
+
+  const displayedClassmates = classmates.filter((c) => {
+    if (selectedTeacherFilter === 'all') return true;
+    if (selectedTeacherFilter === 'none') return !c.teacherEmail;
+    if (selectedTeacherFilter.startsWith('my_')) {
+      const email = selectedTeacherFilter.substring(3);
+      return c.teacherEmail === email;
+    }
+    return c.teacherEmail === selectedTeacherFilter;
+  });
 
   return (
     <div className={styles.page}>
@@ -175,6 +251,76 @@ function ClassmateContent() {
       </div>
 
       <div className={styles.filterBar}>
+<<<<<<< HEAD
+=======
+        <div className={styles.searchSection}>
+          <div className={styles.searchBox}>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+            </svg>
+            <input
+              className={styles.searchInput}
+              placeholder="Search for a course…"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+            />
+            {(search || selectedCourse) && (
+              <button className={styles.clearBtn} onClick={() => { setSearch(''); setSelectedCourse(''); }}>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+                </svg>
+              </button>
+            )}
+          </div>
+
+          {search && !selectedCourse && (
+            <div className={styles.courseDropdown}>
+              {filteredCourses.slice(0, 20).map((c) => (
+                <button
+                  key={c.id}
+                  className={`${styles.courseItem}`}
+                  onClick={() => { setSelectedCourse(c.id); setSearch(c.name); }}
+                >
+                  <span className={styles.courseName}>{c.name}</span>
+                  <span className={styles.courseDept}>{c.department}</span>
+                </button>
+              ))}
+              {filteredCourses.length === 0 && (
+                <div className={styles.noResults}>No courses found</div>
+              )}
+            </div>
+          )}
+        </div>
+
+        {selectedCourse && (
+          <div className={styles.teacherFilterWrap}>
+            <select
+              className={styles.teacherFilterSelect}
+              value={selectedTeacherFilter}
+              onChange={(e) => setSelectedTeacherFilter(e.target.value)}
+            >
+              <option value="all">All Sections / Teachers</option>
+              {myTeacherEmail && (
+                <option value={`my_${myTeacherEmail}`}>My Section ({myTeacherName})</option>
+              )}
+              {uniqueTeachersInResults.map((tEmail) => {
+                const tObj = TEACHERS.find((t) => t.email === tEmail);
+                if (!tObj) return null;
+                if (tEmail === myTeacherEmail) return null;
+                return (
+                  <option key={tEmail} value={tEmail}>
+                    Section: {tObj.name}
+                  </option>
+                );
+              })}
+              {classmates.some((c) => !c.teacherEmail) && (
+                <option value="none">No Teacher Selected</option>
+              )}
+            </select>
+          </div>
+        )}
+
+>>>>>>> 0f439d93ec2c82409ab2a9bdb34adea69de8d9ec
         <div className={styles.semesterToggle}>
           <button 
             className={`${styles.semBtn} ${semester === 1 ? styles.semBtnActive : ''}`}
@@ -206,7 +352,7 @@ function ClassmateContent() {
             <div>
               <h2 className={styles.courseName2}>{course?.name} <span style={{fontSize: 16, color: 'var(--text-muted)'}}>({searchParams.get('block')} Block)</span></h2>
               <p className={styles.resultCount}>
-                {searching ? 'Searching…' : `${classmates.length} classmate${classmates.length !== 1 ? 's' : ''} found in Semester ${semester}`}
+                {searching ? 'Searching…' : `${displayedClassmates.length} classmate${displayedClassmates.length !== 1 ? 's' : ''} found in Semester ${semester}`}
               </p>
             </div>
           </div>
@@ -216,18 +362,23 @@ function ClassmateContent() {
               <div className="spinner" />
               <span>Finding classmates…</span>
             </div>
-          ) : classmates.length === 0 ? (
+          ) : displayedClassmates.length === 0 ? (
             <div className={styles.emptyState}>
               <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.2">
                 <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/>
                 <path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>
               </svg>
+<<<<<<< HEAD
               <p>No other students in this block have enrolled yet.</p>
               <span>Check back after more students add their schedules!</span>
+=======
+              <p>No other students found matching this filter.</p>
+              <span>Try selecting another teacher/section or check back later!</span>
+>>>>>>> 0f439d93ec2c82409ab2a9bdb34adea69de8d9ec
             </div>
           ) : (
             <div className={styles.classmateGrid}>
-              {classmates.map(({ profile, block }) => (
+              {displayedClassmates.map(({ profile, block, teacherName }) => (
                 <div key={profile.uid} className={styles.classmateCard}>
                   {profile.photoURL ? (
                     <Image
@@ -247,6 +398,11 @@ function ClassmateContent() {
                     <span className={styles.classmateName}>{profile.displayName}</span>
                     <div className={styles.classmateDetails}>
                       <span className="badge badge-green">{block}</span>
+                      {teacherName && teacherName !== 'No Teacher Selected' && (
+                        <span className="badge badge-blue" style={{ background: 'var(--green-800)', borderColor: 'var(--green-600)' }}>
+                          {teacherName}
+                        </span>
+                      )}
                       {profile.grade && (
                         <span className="badge badge-gold">Grade {profile.grade}</span>
                       )}
