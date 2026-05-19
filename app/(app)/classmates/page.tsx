@@ -24,6 +24,7 @@ interface ClassmateResult {
   block: string;
   teacherEmail: string;
   teacherName: string;
+  courseName?: string;
 }
 
 interface SemesterSchedule {
@@ -151,10 +152,19 @@ function ClassmateContent() {
         ? BLOCKS.filter((b) => b.label.startsWith(targetBlock))
         : BLOCKS;
 
+      const FILM_SCORING = ['film-scoring-found', 'film-scoring-studio', 'film-scoring-adv'];
+      const SONGWRITING = ['songwriting-found', 'songwriting-studio', 'songwriting-adv'];
+      const MUSIC_PROD = ['music-prod-found', 'music-prod-studio', 'music-prod-adv'];
+
+      let targetCourseIds = [selectedCourse];
+      if (FILM_SCORING.includes(selectedCourse)) targetCourseIds = FILM_SCORING;
+      else if (SONGWRITING.includes(selectedCourse)) targetCourseIds = SONGWRITING;
+      else if (MUSIC_PROD.includes(selectedCourse)) targetCourseIds = MUSIC_PROD;
+
       for (const block of blocksToSearch) {
         const q = query(
           collection(db, 'schedules'),
-          where(`${semKey}.${block.key}`, '==', selectedCourse)
+          where(`${semKey}.${block.key}`, 'in', targetCourseIds)
         );
         const snap = await getDocs(q);
 
@@ -167,6 +177,8 @@ function ClassmateContent() {
           if (profileSnap.exists()) {
             const schedData = schedDoc.data() as any;
             const teacherEmail = schedData[semKey]?.[`${block.key}Teacher`] || '';
+            const theirCourseId = schedData[semKey]?.[block.key];
+            const theirCourse = getCourseById(theirCourseId);
             const teacherObj = TEACHERS.find((t) => t.email === teacherEmail);
             const teacherName = teacherObj ? teacherObj.name : teacherEmail ? 'Unknown Teacher' : 'No Teacher Selected';
 
@@ -175,6 +187,7 @@ function ClassmateContent() {
               block: block.label,
               teacherEmail,
               teacherName,
+              courseName: theirCourse ? theirCourse.name : '',
             });
           }
         }
@@ -321,7 +334,7 @@ function ClassmateContent() {
             </div>
           ) : (
             <div className={styles.classmateGrid}>
-              {displayedClassmates.map(({ profile, block, teacherName }) => (
+              {displayedClassmates.map(({ profile, block, teacherName, courseName }) => (
                 <div key={profile.uid} className={styles.classmateCard}>
                   {profile.photoURL ? (
                     <Image
@@ -341,6 +354,11 @@ function ClassmateContent() {
                     <span className={styles.classmateName}>{profile.displayName}</span>
                     <div className={styles.classmateDetails}>
                       <span className="badge badge-green">{block}</span>
+                      {courseName && (
+                        <span className="badge badge-green" style={{ background: 'var(--bg-raised)', color: 'var(--text-secondary)', borderColor: 'var(--border-hover)' }}>
+                          {courseName}
+                        </span>
+                      )}
                       {teacherName && teacherName !== 'No Teacher Selected' && (
                         <span className="badge badge-blue" style={{ background: 'var(--green-800)', borderColor: 'var(--green-600)' }}>
                           {teacherName}
