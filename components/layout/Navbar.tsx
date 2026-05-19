@@ -79,16 +79,32 @@ export default function Navbar() {
 
           {/* Nav Links */}
           <div className={styles.links}>
-            {NAV_LINKS.map((link) => (
-              <Link
-                key={link.href}
-                href={link.href}
-                className={`${styles.link} ${pathname.startsWith(link.href) ? styles.active : ''}`}
-              >
-                {link.icon}
-                {link.label}
-              </Link>
-            ))}
+            {NAV_LINKS.map((link) => {
+              if (link.label === 'Chat') {
+                return (
+                  <div key={link.href} className={styles.link} style={{ pointerEvents: 'none', opacity: 0.6, flexDirection: 'column', alignItems: 'center', padding: '4px 8px', gap: '2px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', textDecoration: 'line-through' }}>
+                      {link.icon}
+                      {link.label}
+                    </div>
+                    <span style={{ fontSize: '9px', textDecoration: 'none', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                      Temporarily disabled
+                    </span>
+                  </div>
+                );
+              }
+
+              return (
+                <Link
+                  key={link.href}
+                  href={link.href}
+                  className={`${styles.link} ${pathname.startsWith(link.href) ? styles.active : ''}`}
+                >
+                  {link.icon}
+                  {link.label}
+                </Link>
+              );
+            })}
             {isAdmin && (
               <Link
                 href="/admin"
