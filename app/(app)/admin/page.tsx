@@ -172,7 +172,7 @@ export default function AdminPage() {
     }
   }, [logs, customConsoleLines, users]);
 
-  const handleConsoleSubmit = (e: React.KeyboardEvent<HTMLInputElement>) => {
+  const handleConsoleSubmit = async (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key !== 'Enter' || !cmdValue.trim()) return;
 
     const cmd = cmdValue.trim();
@@ -189,7 +189,7 @@ export default function AdminPage() {
     const cleanCmd = cmd.toLowerCase();
 
     if (cleanCmd === 'help') {
-      outputMsg = 'Available commands:\n  help      - Display this help information menu.\n  completed - List completed schedules chronologically (beginning to end).\n  recent    - List completed schedules reverse-chronologically (most recent first).\n  users     - Show count of registered schedule profiles.\n  clear     - Clear custom logs and reset console view.';
+      outputMsg = 'Available commands:\n  help      - Display this help information menu.\n  completed - List completed schedules chronologically (beginning to end).\n  recent    - List completed schedules reverse-chronologically (most recent first).\n  teachers  - Analyze and list students who selected teachers for ALL of their classes.\n  users     - Show count of registered schedule profiles.\n  clear     - Clear custom logs and reset console view.';
     } else if (cleanCmd === 'completed' || cleanCmd === 'recent') {
       const enriched = users
         .map(u => {
@@ -225,6 +225,90 @@ export default function AdminPage() {
           }).join('\n');
       } else {
         outputMsg = 'No students have completed schedules yet.';
+      }
+    } else if (cleanCmd === 'teachers') {
+      try {
+        const schedSnap = await getDocs(collection(db, 'schedules'));
+        const totalUsersCount = users.length;
+        const totalSchedulesCount = schedSnap.size;
+        
+        let completedTeachersCount = 0;
+        const completedUsers: { displayName: string; email: string; grade: string }[] = [];
+
+        schedSnap.docs.forEach(docSnap => {
+          const data = docSnap.data();
+          const uid = docSnap.id;
+          const userProfile = users.find(u => u.uid === uid);
+          
+          if (!userProfile) return;
+
+          let hasClasses = false;
+          let missingTeacher = false;
+
+          const sems = [data.semester1, data.semester2].filter(Boolean);
+          sems.forEach(sem => {
+            // Block A
+            if (sem.aBlock) {
+              hasClasses = true;
+              if (!sem.aBlockTeacher) missingTeacher = true;
+            }
+            // Block B
+            if (sem.bBlock) {
+              hasClasses = true;
+              if (!sem.bBlockTeacher) missingTeacher = true;
+            }
+            // CD Blocks
+            if (sem.hasCDBlock) {
+              if (sem.cdBlock) {
+                hasClasses = true;
+                if (!sem.cdBlockTeacher) missingTeacher = true;
+              }
+            } else {
+              if (sem.cBlock) {
+                hasClasses = true;
+                if (!sem.cBlockTeacher) missingTeacher = true;
+              }
+              if (sem.dBlock) {
+                hasClasses = true;
+                if (!sem.dBlockTeacher) missingTeacher = true;
+              }
+            }
+            // Block E
+            if (sem.eBlock) {
+              hasClasses = true;
+              if (!sem.eBlockTeacher) missingTeacher = true;
+            }
+          });
+
+          // Must have classes selected and NO missing teachers on any of them
+          if (hasClasses && !missingTeacher) {
+            completedTeachersCount++;
+            completedUsers.push({
+              displayName: userProfile.displayName || 'Unknown Student',
+              email: userProfile.email || '',
+              grade: userProfile.grade || 'N/A'
+            });
+          }
+        });
+
+        const pctBody = totalUsersCount > 0 ? Math.round((completedTeachersCount / totalUsersCount) * 100) : 0;
+        const pctSched = totalSchedulesCount > 0 ? Math.round((completedTeachersCount / totalSchedulesCount) * 100) : 0;
+
+        outputMsg = `Teacher Selection Completeness Report:\n` +
+                    `----------------------------------------\n` +
+                    `Total Registered Users: ${totalUsersCount}\n` +
+                    `Saved Schedules Count: ${totalSchedulesCount}\n` +
+                    `Completed Teacher Selection for ALL Classes: ${completedTeachersCount}\n` +
+                    `Percentage of Total Student Body: ${pctBody}%\n` +
+                    `Percentage of Saved Schedules: ${pctSched}%\n\n` +
+                    `Students who completed teacher selections for all saved blocks:\n` +
+                    (completedUsers.length > 0
+                      ? completedUsers.map((u, idx) => `  ${idx + 1}. ${u.displayName} (${u.email}) [Grade: ${u.grade}]`).join('\n')
+                      : '  No students have fully selected teachers for all their classes yet.');
+
+      } catch (err) {
+        console.error(err);
+        outputMsg = 'Error fetching schedule records for teacher selection analysis.';
       }
     } else if (cleanCmd === 'users') {
       outputMsg = `Total registered schedule profiles: ${users.length} user(s).`;
@@ -271,7 +355,7 @@ export default function AdminPage() {
           ? log.timestamp.toDate() 
           : new Date();
         
-        let details = 'Logged into platform session';
+        let details = 'Came online';
         if (log.type === 'join') details = 'Created schedule profile for the first time';
         else if (log.type === 'schedule_save') details = 'Saved schedule blocks to the database';
 
@@ -472,12 +556,15 @@ export default function AdminPage() {
             
             <div className={styles.terminalBody} ref={terminalBodyRef}>
               {getCombinedConsoleLines().map((log) => {
-                let typeBadge = 'AUTH';
+                let typeBadge = 'ONLINE';
                 let badgeClass = styles.badgeAuth;
 
                 if (log.type === 'join') {
                   typeBadge = 'JOIN';
                   badgeClass = styles.badgeJoin;
+                } else if (log.type === 'login') {
+                  typeBadge = 'ONLINE';
+                  badgeClass = styles.badgeAuth;
                 } else if (log.type === 'schedule_save') {
                   typeBadge = 'SAVE';
                   badgeClass = styles.badgeSave;
@@ -519,7 +606,7 @@ export default function AdminPage() {
               <input
                 type="text"
                 className={styles.termInput}
-                placeholder="Type command (e.g. 'help', 'completed', 'users', 'clear')..."
+                placeholder="Type command (e.g. 'help', 'completed', 'teachers', 'users', 'clear')..."
                 value={cmdValue}
                 onChange={(e) => setCmdValue(e.target.value)}
                 onKeyDown={handleConsoleSubmit}
