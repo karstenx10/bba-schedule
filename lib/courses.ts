@@ -120,7 +120,8 @@ export const COURSES: Course[] = [
   { id: 'sp1', name: 'Spanish 1', department: 'World Languages' },
   { id: 'sp2', name: 'Spanish 2', department: 'World Languages' },
   { id: 'sp3', name: 'Spanish 3', department: 'World Languages' },
-  { id: 'sp4h', name: 'Honors Spanish 4/5', department: 'World Languages' },
+  { id: 'sp4h', name: 'Honors Spanish 4', department: 'World Languages' },
+  { id: 'sp5h', name: 'Honors Spanish 5', department: 'World Languages' },
   { id: 'ap-sp', name: 'AP Spanish', department: 'World Languages' },
 
   // Creative Arts: Media & Performing
