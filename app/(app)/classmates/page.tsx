@@ -51,8 +51,10 @@ const BLOCKS = [
   { key: 'eBlock', label: 'E Block' },
 ];
 
-function BlockCard({ label, courseId, semester, sublabel, badge }: { label: string, courseId: string, semester: number, sublabel?: string, badge?: string }) {
+function BlockCard({ label, courseId, teacherEmail, semester, sublabel, badge }: { label: string, courseId: string, teacherEmail?: string, semester: number, sublabel?: string, badge?: string }) {
   const course = getCourseById(courseId);
+  const teacherObj = TEACHERS.find((t) => t.email === teacherEmail);
+  const teacherName = teacherObj ? teacherObj.name : (teacherEmail ? 'Unknown Teacher' : 'No Teacher Selected');
   
   if (!courseId) {
     return (
@@ -83,7 +85,9 @@ function BlockCard({ label, courseId, semester, sublabel, badge }: { label: stri
       <div className={scheduleStyles.selectTrigger} style={{ pointerEvents: 'none' }}>
         <div className={scheduleStyles.selectedCourse}>
           <span className={scheduleStyles.selectedName}>{course?.name}</span>
-          <span className={scheduleStyles.selectedDept}>{course?.department}</span>
+          <span className={scheduleStyles.selectedDept}>
+            {course?.department} {courseId && teacherEmail && teacherEmail !== '' ? `• ${teacherName}` : ''}
+          </span>
         </div>
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
           <polyline points="9 18 15 12 9 6" />
@@ -105,7 +109,6 @@ function ClassmateContent() {
   const [searching, setSearching] = useState(false);
   const [scheduleData, setScheduleData] = useState<ScheduleDoc | null>(null);
   const [loadingSchedule, setLoadingSchedule] = useState(true);
-  const [search, setSearch] = useState('');
   const [selectedTeacherFilter, setSelectedTeacherFilter] = useState('all');
   const [mySchedule, setMySchedule] = useState<any>(null);
 
@@ -184,22 +187,7 @@ function ClassmateContent() {
 
     findClassmates();
   }, [selectedCourse, semester, user, searchParams]);
-  // Set search text if course is pre-selected via URL
-  useEffect(() => {
-    const courseId = searchParams.get('courseId');
-    if (courseId) {
-      const c = getCourseById(courseId);
-      if (c) setSearch(c.name);
-    }
-  }, [searchParams]);
-
   const course = getCourseById(selectedCourse);
-
-  const filteredCourses = COURSES.filter(
-    (c) =>
-      c.name.toLowerCase().includes(search.toLowerCase()) ||
-      c.department.toLowerCase().includes(search.toLowerCase())
-  );
 
   const getMyTeacherForCourse = () => {
     if (!mySchedule) return '';
@@ -246,45 +234,6 @@ function ClassmateContent() {
       </div>
 
       <div className={styles.filterBar}>
-        <div className={styles.searchSection}>
-          <div className={styles.searchBox}>
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
-            </svg>
-            <input
-              className={styles.searchInput}
-              placeholder="Search for a course…"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-            />
-            {(search || selectedCourse) && (
-              <button className={styles.clearBtn} onClick={() => { setSearch(''); router.push(`/classmates?semester=${semester}`); }}>
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                  <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
-                </svg>
-              </button>
-            )}
-          </div>
-
-          {search && !selectedCourse && (
-            <div className={styles.courseDropdown}>
-              {filteredCourses.slice(0, 20).map((c) => (
-                <button
-                  key={c.id}
-                  className={`${styles.courseItem}`}
-                  onClick={() => { setSearch(c.name); router.push(`/classmates?courseId=${c.id}&semester=${semester}`); }}
-                >
-                  <span className={styles.courseName}>{c.name}</span>
-                  <span className={styles.courseDept}>{c.department}</span>
-                </button>
-              ))}
-              {filteredCourses.length === 0 && (
-                <div className={styles.noResults}>No courses found</div>
-              )}
-            </div>
-          )}
-        </div>
-
         {selectedCourse && (
           <div className={styles.teacherFilterWrap}>
             <select
@@ -421,12 +370,14 @@ function ClassmateContent() {
               <BlockCard
                 label="A"
                 courseId={semester === 1 ? scheduleData.semester1.aBlock : scheduleData.semester2.aBlock}
+                teacherEmail={semester === 1 ? (scheduleData.semester1 as any).aBlockTeacher : (scheduleData.semester2 as any).aBlockTeacher}
                 sublabel="Block — Daily, 8:15–9:20"
                 semester={semester}
               />
               <BlockCard
                 label="B"
                 courseId={semester === 1 ? scheduleData.semester1.bBlock : scheduleData.semester2.bBlock}
+                teacherEmail={semester === 1 ? (scheduleData.semester1 as any).bBlockTeacher : (scheduleData.semester2 as any).bBlockTeacher}
                 sublabel="Block — Daily, 9:25–10:30"
                 semester={semester}
               />
@@ -443,6 +394,7 @@ function ClassmateContent() {
                   <BlockCard
                     label="CD"
                     courseId={semester === 1 ? scheduleData.semester1.cdBlock : scheduleData.semester2.cdBlock}
+                    teacherEmail={semester === 1 ? (scheduleData.semester1 as any).cdBlockTeacher : (scheduleData.semester2 as any).cdBlockTeacher}
                     sublabel="Double Block — Every day"
                     badge="Full period"
                     semester={semester}
@@ -452,6 +404,7 @@ function ClassmateContent() {
                     <BlockCard
                       label="C"
                       courseId={semester === 1 ? scheduleData.semester1.cBlock : scheduleData.semester2.cBlock}
+                      teacherEmail={semester === 1 ? (scheduleData.semester1 as any).cBlockTeacher : (scheduleData.semester2 as any).cBlockTeacher}
                       sublabel="Day 1 only"
                       badge="Alternating"
                       semester={semester}
@@ -459,6 +412,7 @@ function ClassmateContent() {
                     <BlockCard
                       label="D"
                       courseId={semester === 1 ? scheduleData.semester1.dBlock : scheduleData.semester2.dBlock}
+                      teacherEmail={semester === 1 ? (scheduleData.semester1 as any).dBlockTeacher : (scheduleData.semester2 as any).dBlockTeacher}
                       sublabel="Day 2 only"
                       badge="Alternating"
                       semester={semester}
@@ -470,6 +424,7 @@ function ClassmateContent() {
               <BlockCard
                 label="E"
                 courseId={semester === 1 ? scheduleData.semester1.eBlock : scheduleData.semester2.eBlock}
+                teacherEmail={semester === 1 ? (scheduleData.semester1 as any).eBlockTeacher : (scheduleData.semester2 as any).eBlockTeacher}
                 sublabel="Block — Daily, 1:30–2:35"
                 semester={semester}
               />
