@@ -19,7 +19,7 @@ export const DEPARTMENTS = [
   'CS & Engineering',
   'Farm & Food Studies',
   'PE & Wellness',
-  'Flexible Pathways',
+  'Flexible Pathways'
 ] as const;
 
 export const COURSES: Course[] = [
@@ -219,6 +219,7 @@ export const COURSES: Course[] = [
   { id: 'internship', name: 'Work-Based Learning: Internships', department: 'Flexible Pathways' },
   { id: 'trades', name: 'Tools, Techniques, and the Trades', department: 'Flexible Pathways' },
   { id: 'free', name: 'Free / Study Hall', department: 'Flexible Pathways' },
+  { id: 'hb-learning', name: 'Habits of Learning', department: 'Flexible Pathways' },
   { id: 'swtech', name: 'Southwest Tech Program', department: 'Flexible Pathways' },
 ];
 
