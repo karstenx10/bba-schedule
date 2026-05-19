@@ -23,7 +23,7 @@ interface Message {
 }
 
 interface ChatInfo {
-  type: 'class' | 'dm' | 'group';
+  type: 'class' | 'group';
   courseName?: string;
   block?: string;
   participants?: string[];
@@ -48,7 +48,6 @@ function ChatRoomContent() {
 
   const [chatInfo, setChatInfo] = useState<ChatInfo | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
-  const [dmPartner, setDmPartner] = useState<UserProfile | null>(null);
   const [input, setInput] = useState('');
   const [sending, setSending] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -64,41 +63,10 @@ function ChatRoomContent() {
   // Load chat info
   useEffect(() => {
     if (!chatId || !user) return;
-    getDoc(doc(db, 'chats', chatId)).then(async (snap) => {
+    getDoc(doc(db, 'chats', chatId)).then((snap) => {
       if (!snap.exists()) { router.replace('/chat'); return; }
       const info = snap.data() as ChatInfo;
       setChatInfo(info);
-
-      if (info.type === 'dm') {
-        const isParticipant = info.participants?.includes(user.uid);
-        if (isParticipant) {
-          const otherUid = info.participants?.find((p) => p !== user.uid);
-          if (otherUid) {
-            const pSnap = await getDoc(doc(db, 'users', otherUid));
-            if (pSnap.exists()) setDmPartner(pSnap.data() as UserProfile);
-          }
-        } else {
-          // Admin viewing a DM they are not part of
-          const p1Uid = info.participants?.[0];
-          const p2Uid = info.participants?.[1];
-          let p1Name = 'Unknown';
-          let p2Name = 'Unknown';
-          if (p1Uid) {
-            const p1Snap = await getDoc(doc(db, 'users', p1Uid));
-            if (p1Snap.exists()) p1Name = (p1Snap.data() as UserProfile).displayName;
-          }
-          if (p2Uid) {
-            const p2Snap = await getDoc(doc(db, 'users', p2Uid));
-            if (p2Snap.exists()) p2Name = (p2Snap.data() as UserProfile).displayName;
-          }
-          setDmPartner({
-            uid: 'admin-view',
-            displayName: `${p1Name} & ${p2Name}`,
-            photoURL: '',
-            email: ''
-          });
-        }
-      }
       setLoading(false);
     });
   }, [chatId, user, router]);
@@ -157,9 +125,7 @@ function ChatRoomContent() {
     }
   };
 
-  const chatName = chatInfo?.type === 'dm'
-    ? dmPartner?.displayName ?? 'Direct Message'
-    : chatInfo?.type === 'class'
+  const chatName = chatInfo?.type === 'class'
     ? `${chatInfo.courseName} — ${chatInfo.block} Block`
     : chatInfo?.name ?? 'Chat';
 
@@ -220,19 +186,11 @@ function ChatRoomContent() {
           </svg>
         </Link>
         <div className={styles.headerInfo}>
-          {chatInfo?.type === 'dm' && dmPartner?.photoURL ? (
-            <Image src={dmPartner.photoURL} alt={dmPartner.displayName} width={36} height={36} className={styles.headerAvatar} referrerPolicy="no-referrer" />
-          ) : (
-            <div className={styles.headerAvatarDefault}>
-              {chatInfo?.type === 'class' ? (
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                  <rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/>
-                </svg>
-              ) : (
-                dmPartner?.displayName?.[0] ?? '?'
-              )}
-            </div>
-          )}
+          <div className={styles.headerAvatarDefault}>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/>
+            </svg>
+          </div>
           <div>
             <div className={styles.headerName}>{chatName}</div>
             {chatInfo?.type === 'class' && (
@@ -302,7 +260,7 @@ function ChatRoomContent() {
         <textarea
           ref={inputRef}
           className={styles.input}
-          placeholder={`Message ${chatInfo?.type === 'dm' ? dmPartner?.displayName ?? 'student' : chatName}…`}
+          placeholder={`Message ${chatName}…`}
           value={input}
           onChange={(e) => setInput(e.target.value)}
           onKeyDown={handleKeyDown}
