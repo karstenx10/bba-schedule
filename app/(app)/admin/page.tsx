@@ -683,6 +683,9 @@ export default function AdminPage() {
 
       {activeTab === 'chats' && (
         <div>
+          <div style={{ marginBottom: 16 }}>
+            <Link href="/school-chat" className="btn btn-primary">Open School Chat</Link>
+          </div>
           <div className={styles.tableWrap}>
             <div style={{ padding: 16, borderBottom: '1px solid var(--border)' }}>
               <input

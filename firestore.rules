@@ -6,6 +6,10 @@ service cloud.firestore {
       return request.auth != null && (request.auth.token.email == 'kolsen29@burrburton.org' || request.auth.token.email == 'ebuikema29@burrburton.org');
     }
 
+    function isGlobalChat(chatId) {
+      return chatId == 'school_global';
+    }
+
     // Users: anyone logged in can read all users (for classmate search/DM)
     // Only you can write your own profile, unless you are an admin
     match /users/{uid} {
@@ -42,7 +46,8 @@ service cloud.firestore {
           && request.resource.data.text is string
           && request.resource.data.text.size() > 0
           && request.resource.data.text.size() <= 2000;
-        allow update, delete: if false;
+        allow update: if false;
+        allow delete: if isAdmin() && isGlobalChat(chatId);
       }
     }
 
