@@ -4,18 +4,24 @@ import { useState, useEffect, useCallback } from 'react';
 import { doc, getDoc, setDoc, serverTimestamp, deleteDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { useAuth } from '@/context/AuthContext';
-import { COURSES, DEPARTMENTS, getCourseById } from '@/lib/courses';
+import { COURSES, DEPARTMENTS, getCourseById, TEACHERS, Teacher } from '@/lib/courses';
 import Link from 'next/link';
 import styles from './schedule.module.css';
 
 interface SemesterSchedule {
   aBlock: string;
+  aBlockTeacher?: string;
   bBlock: string;
+  bBlockTeacher?: string;
   hasCDBlock: boolean;
   cBlock: string;
+  cBlockTeacher?: string;
   cdBlock: string;
+  cdBlockTeacher?: string;
   dBlock: string;
+  dBlockTeacher?: string;
   eBlock: string;
+  eBlockTeacher?: string;
 }
 
 interface ScheduleDoc {
@@ -27,12 +33,18 @@ interface ScheduleDoc {
 
 const EMPTY_SEMESTER: SemesterSchedule = {
   aBlock: '',
+  aBlockTeacher: '',
   bBlock: '',
+  bBlockTeacher: '',
   hasCDBlock: false,
   cBlock: '',
+  cBlockTeacher: '',
   cdBlock: '',
+  cdBlockTeacher: '',
   dBlock: '',
+  dBlockTeacher: '',
   eBlock: '',
+  eBlockTeacher: '',
 };
 
 const EMPTY_DOC: ScheduleDoc = {
@@ -45,6 +57,8 @@ function CourseSelect({
   id,
   value,
   onChange,
+  teacherValue,
+  onChangeTeacher,
   label,
   sublabel,
   badge,
@@ -53,6 +67,8 @@ function CourseSelect({
   id: string;
   value: string;
   onChange: (v: string) => void;
+  teacherValue: string;
+  onChangeTeacher: (v: string) => void;
   label: string;
   sublabel?: string;
   badge?: string;
@@ -60,7 +76,11 @@ function CourseSelect({
 }) {
   const [search, setSearch] = useState('');
   const [open, setOpen] = useState(false);
+  const [teacherOpen, setTeacherOpen] = useState(false);
+  const [teacherSearch, setTeacherSearch] = useState('');
+
   const selected = getCourseById(value);
+  const selectedTeacher = TEACHERS.find((t) => t.email === teacherValue);
 
   const filtered = COURSES.filter(
     (c) =>
@@ -79,6 +99,22 @@ function CourseSelect({
     setOpen(false);
     setSearch('');
   };
+
+  const handleSelectTeacher = (email: string) => {
+    onChangeTeacher(email);
+    setTeacherOpen(false);
+    setTeacherSearch('');
+  };
+
+  const courseDept = selected ? selected.department : '';
+  const filteredTeachers = TEACHERS.filter(
+    (t) =>
+      t.name.toLowerCase().includes(teacherSearch.toLowerCase()) ||
+      t.role?.toLowerCase().includes(teacherSearch.toLowerCase())
+  );
+
+  const suggestedTeachers = filteredTeachers.filter((t) => t.departments.includes(courseDept));
+  const otherTeachers = filteredTeachers.filter((t) => !t.departments.includes(courseDept));
 
   return (
     <div className={styles.blockCard}>
@@ -116,18 +152,6 @@ function CourseSelect({
             <polyline points="6 9 12 15 18 9" />
           </svg>
         </button>
-
-        {selected && (
-          <Link 
-            href={`/classmates?courseId=${selected.id}&semester=${semester}&block=${label}`} 
-            className={styles.classmateLink}
-          >
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-              <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>
-            </svg>
-            View Classmates
-          </Link>
-        )}
 
         {open && (
           <div className={styles.dropdown}>
@@ -176,6 +200,124 @@ function CourseSelect({
           </div>
         )}
       </div>
+
+      {selected && (
+        <div className={styles.teacherSection}>
+          <span className={styles.teacherLabel}>Teacher</span>
+          <div className={styles.selectWrapper}>
+            <button
+              className={styles.teacherSelectTrigger}
+              onClick={() => setTeacherOpen(!teacherOpen)}
+              type="button"
+            >
+              {selectedTeacher ? (
+                <span className={styles.selectedTeacherName}>
+                  {selectedTeacher.name}
+                  {selectedTeacher.role && (
+                    <span className={styles.selectedTeacherRole}>
+                      — {selectedTeacher.role.split(',')[0]}
+                    </span>
+                  )}
+                </span>
+              ) : (
+                <span className={styles.placeholder}>Select your teacher…</span>
+              )}
+              <svg
+                width="12"
+                height="12"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                style={{ transform: teacherOpen ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s' }}
+              >
+                <polyline points="6 9 12 15 18 9" />
+              </svg>
+            </button>
+
+            {teacherOpen && (
+              <div className={styles.teacherDropdown}>
+                <div className={styles.searchWrap}>
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <circle cx="11" cy="11" r="8" /><line x1="21" y1="21" x2="16.65" y2="16.65" />
+                  </svg>
+                  <input
+                    autoFocus
+                    className={styles.searchInput}
+                    placeholder="Search teachers…"
+                    value={teacherSearch}
+                    onChange={(e) => setTeacherSearch(e.target.value)}
+                  />
+                </div>
+
+                <div className={styles.dropdownList}>
+                  <button
+                    className={styles.dropdownItem}
+                    onClick={() => handleSelectTeacher('')}
+                    type="button"
+                  >
+                    <span style={{ color: 'var(--text-muted)', fontStyle: 'italic' }}>— None / Don't Know —</span>
+                  </button>
+
+                  {suggestedTeachers.length > 0 && (
+                    <div>
+                      <div className={styles.deptHeader}>Suggested {selected.department} Teachers</div>
+                      {suggestedTeachers.map((t) => (
+                        <button
+                          key={t.email}
+                          className={`${styles.dropdownItem} ${teacherValue === t.email ? styles.dropdownItemActive : ''}`}
+                          onClick={() => handleSelectTeacher(t.email)}
+                          type="button"
+                        >
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%' }}>
+                            <span>{t.name}</span>
+                            <span style={{ fontSize: 10, opacity: 0.6 }}>{t.role?.split(',')[0]}</span>
+                          </div>
+                        </button>
+                      ))}
+                    </div>
+                  )}
+
+                  {otherTeachers.length > 0 && (
+                    <div>
+                      <div className={styles.deptHeader}>All Other Teachers</div>
+                      {otherTeachers.map((t) => (
+                        <button
+                          key={t.email}
+                          className={`${styles.dropdownItem} ${teacherValue === t.email ? styles.dropdownItemActive : ''}`}
+                          onClick={() => handleSelectTeacher(t.email)}
+                          type="button"
+                        >
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%' }}>
+                            <span>{t.name}</span>
+                            <span style={{ fontSize: 10, opacity: 0.6 }}>{t.role?.split(',')[0]}</span>
+                          </div>
+                        </button>
+                      ))}
+                    </div>
+                  )}
+
+                  {filteredTeachers.length === 0 && (
+                    <div className={styles.noResults}>No teachers found</div>
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {selected && (
+        <Link 
+          href={`/classmates?courseId=${selected.id}&semester=${semester}&block=${label}`} 
+          className={styles.classmateLink}
+        >
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+            <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+          </svg>
+          View Classmates
+        </Link>
+      )}
     </div>
   );
 }
@@ -199,6 +341,7 @@ export default function SchedulePage() {
         if (!raw.semester1 && !raw.semester2) {
           initialized = {
             semester1: {
+              ...EMPTY_SEMESTER,
               aBlock: raw.aBlock || '',
               bBlock: raw.bBlock || '',
               hasCDBlock: !!raw.hasCDBlock,
@@ -211,7 +354,11 @@ export default function SchedulePage() {
             grade: raw.grade || '',
           };
         } else {
-          initialized = raw as ScheduleDoc;
+          initialized = {
+            semester1: { ...EMPTY_SEMESTER, ...raw.semester1 },
+            semester2: { ...EMPTY_SEMESTER, ...raw.semester2 },
+            grade: raw.grade || '',
+          };
         }
         setDocData(initialized);
         setSavedData(initialized);
@@ -246,43 +393,51 @@ export default function SchedulePage() {
         const oldS = sem.num === 1 ? savedData.semester1 : savedData.semester2;
 
         const newBlockCourses = [
-          { block: 'A', courseId: s.aBlock },
-          { block: 'B', courseId: s.bBlock },
-          { block: s.hasCDBlock ? 'CD' : 'C', courseId: s.hasCDBlock ? s.cdBlock : s.cBlock },
-          ...(!s.hasCDBlock && s.dBlock ? [{ block: 'D', courseId: s.dBlock }] : []),
-          { block: 'E', courseId: s.eBlock },
+          { block: 'A', courseId: s.aBlock, teacher: s.aBlockTeacher },
+          { block: 'B', courseId: s.bBlock, teacher: s.bBlockTeacher },
+          { block: s.hasCDBlock ? 'CD' : 'C', courseId: s.hasCDBlock ? s.cdBlock : s.cBlock, teacher: s.hasCDBlock ? s.cdBlockTeacher : s.cBlockTeacher },
+          ...(!s.hasCDBlock && s.dBlock ? [{ block: 'D', courseId: s.dBlock, teacher: s.dBlockTeacher }] : []),
+          { block: 'E', courseId: s.eBlock, teacher: s.eBlockTeacher },
         ].filter(x => x.courseId);
 
         const oldBlockCourses = [
-          { block: 'A', courseId: oldS.aBlock },
-          { block: 'B', courseId: oldS.bBlock },
-          { block: oldS.hasCDBlock ? 'CD' : 'C', courseId: oldS.hasCDBlock ? oldS.cdBlock : oldS.cBlock },
-          ...(!oldS.hasCDBlock && oldS.dBlock ? [{ block: 'D', courseId: oldS.dBlock }] : []),
-          { block: 'E', courseId: oldS.eBlock },
+          { block: 'A', courseId: oldS.aBlock, teacher: oldS.aBlockTeacher },
+          { block: 'B', courseId: oldS.bBlock, teacher: oldS.bBlockTeacher },
+          { block: oldS.hasCDBlock ? 'CD' : 'C', courseId: oldS.hasCDBlock ? oldS.cdBlock : oldS.cBlock, teacher: oldS.hasCDBlock ? oldS.cdBlockTeacher : oldS.cBlockTeacher },
+          ...(!oldS.hasCDBlock && oldS.dBlock ? [{ block: 'D', courseId: oldS.dBlock, teacher: oldS.dBlockTeacher }] : []),
+          { block: 'E', courseId: oldS.eBlock, teacher: oldS.eBlockTeacher },
         ].filter(x => x.courseId);
 
-        // Remove from chats that were dropped
+        // Remove from chats that were dropped or if teacher changed
         for (const oldItem of oldBlockCourses) {
           const isStillInChat = newBlockCourses.some(
-            (newItem) => newItem.block === oldItem.block && newItem.courseId === oldItem.courseId
+            (newItem) =>
+              newItem.block === oldItem.block &&
+              newItem.courseId === oldItem.courseId &&
+              (newItem.teacher || '') === (oldItem.teacher || '')
           );
           if (!isStillInChat) {
-            const oldChatId = `class_${oldItem.courseId}_${oldItem.block}_S${sem.num}`;
+            const teacherSuffix = oldItem.teacher ? `_${oldItem.teacher.replace(/[^a-zA-Z0-9]/g, '_')}` : '';
+            const oldChatId = `class_${oldItem.courseId}_${oldItem.block}_S${sem.num}${teacherSuffix}`;
             await deleteDoc(doc(db, 'chats', oldChatId, 'members', user.uid));
           }
         }
 
-        for (const { block, courseId } of newBlockCourses) {
-          const chatId = `class_${courseId}_${block}_S${sem.num}`;
+        for (const { block, courseId, teacher } of newBlockCourses) {
+          const teacherSuffix = teacher ? `_${teacher.replace(/[^a-zA-Z0-9]/g, '_')}` : '';
+          const chatId = `class_${courseId}_${block}_S${sem.num}${teacherSuffix}`;
           const chatRef = doc(db, 'chats', chatId);
           const chatSnap = await getDoc(chatRef);
           if (!chatSnap.exists()) {
             const course = getCourseById(courseId);
+            const teacherObj = TEACHERS.find(t => t.email === teacher);
             await setDoc(chatRef, {
               type: 'class',
               courseName: course?.name ?? courseId,
               block,
               semester: sem.num,
+              teacher: teacherObj ? teacherObj.name : null,
+              teacherEmail: teacher || null,
               createdAt: serverTimestamp(),
             });
           }
@@ -386,7 +541,12 @@ export default function SchedulePage() {
           id="a"
           label="A"
           value={currentSchedule.aBlock}
-          onChange={(v) => updateSemester('aBlock', v)}
+          onChange={(v) => {
+            updateSemester('aBlock', v);
+            if (!v) updateSemester('aBlockTeacher', '');
+          }}
+          teacherValue={currentSchedule.aBlockTeacher || ''}
+          onChangeTeacher={(v) => updateSemester('aBlockTeacher', v)}
           sublabel="Block — Daily, 8:15–9:20"
           semester={semester}
         />
@@ -395,7 +555,12 @@ export default function SchedulePage() {
           id="b"
           label="B"
           value={currentSchedule.bBlock}
-          onChange={(v) => updateSemester('bBlock', v)}
+          onChange={(v) => {
+            updateSemester('bBlock', v);
+            if (!v) updateSemester('bBlockTeacher', '');
+          }}
+          teacherValue={currentSchedule.bBlockTeacher || ''}
+          onChangeTeacher={(v) => updateSemester('bBlockTeacher', v)}
           sublabel="Block — Daily, 9:25–10:30"
           semester={semester}
         />
@@ -429,7 +594,12 @@ export default function SchedulePage() {
               id="cd"
               label="CD"
               value={currentSchedule.cdBlock}
-              onChange={(v) => updateSemester('cdBlock', v)}
+              onChange={(v) => {
+                updateSemester('cdBlock', v);
+                if (!v) updateSemester('cdBlockTeacher', '');
+              }}
+              teacherValue={currentSchedule.cdBlockTeacher || ''}
+              onChangeTeacher={(v) => updateSemester('cdBlockTeacher', v)}
               sublabel="Double Block — Every day"
               badge="Full period"
               semester={semester}
@@ -440,7 +610,12 @@ export default function SchedulePage() {
                 id="c"
                 label="C"
                 value={currentSchedule.cBlock}
-                onChange={(v) => updateSemester('cBlock', v)}
+                onChange={(v) => {
+                  updateSemester('cBlock', v);
+                  if (!v) updateSemester('cBlockTeacher', '');
+                }}
+                teacherValue={currentSchedule.cBlockTeacher || ''}
+                onChangeTeacher={(v) => updateSemester('cBlockTeacher', v)}
                 sublabel="Day 1 only"
                 badge="Alternating"
                 semester={semester}
@@ -449,7 +624,12 @@ export default function SchedulePage() {
                 id="d"
                 label="D"
                 value={currentSchedule.dBlock}
-                onChange={(v) => updateSemester('dBlock', v)}
+                onChange={(v) => {
+                  updateSemester('dBlock', v);
+                  if (!v) updateSemester('dBlockTeacher', '');
+                }}
+                teacherValue={currentSchedule.dBlockTeacher || ''}
+                onChangeTeacher={(v) => updateSemester('dBlockTeacher', v)}
                 sublabel="Day 2 only"
                 badge="Alternating"
                 semester={semester}
@@ -462,7 +642,12 @@ export default function SchedulePage() {
           id="e"
           label="E"
           value={currentSchedule.eBlock}
-          onChange={(v) => updateSemester('eBlock', v)}
+          onChange={(v) => {
+            updateSemester('eBlock', v);
+            if (!v) updateSemester('eBlockTeacher', '');
+          }}
+          teacherValue={currentSchedule.eBlockTeacher || ''}
+          onChangeTeacher={(v) => updateSemester('eBlockTeacher', v)}
           sublabel="Block — Daily, 1:30–2:35"
           semester={semester}
         />

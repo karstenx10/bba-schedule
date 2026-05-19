@@ -28,6 +28,9 @@ interface ChatInfo {
   block?: string;
   participants?: string[];
   name?: string;
+  teacher?: string;
+  teacherEmail?: string;
+  semester?: number;
 }
 
 interface UserProfile {
@@ -233,7 +236,17 @@ function ChatRoomContent() {
           <div>
             <div className={styles.headerName}>{chatName}</div>
             {chatInfo?.type === 'class' && (
-              <div className={styles.headerSub}>Class Chat</div>
+              <div className={styles.headerSub} style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+                <span>Semester {chatInfo.semester ?? 1} Class Chat</span>
+                {chatInfo.teacher && (
+                  <>
+                    <span>•</span>
+                    <span className="badge badge-blue" style={{ fontSize: 9, padding: '2px 6px', background: 'var(--green-800)', borderColor: 'var(--green-600)' }}>
+                      {chatInfo.teacher}
+                    </span>
+                  </>
+                )}
+              </div>
             )}
           </div>
         </div>

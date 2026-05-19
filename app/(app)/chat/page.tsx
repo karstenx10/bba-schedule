@@ -18,6 +18,8 @@ interface Chat {
   participants?: string[];
   lastMessage?: string;
   lastMessageAt?: { toDate: () => Date } | null;
+  teacher?: string;
+  teacherEmail?: string;
 }
 
 interface UserProfile {
@@ -177,9 +179,14 @@ export default function ChatPage() {
                   </div>
                   <div className={styles.chatInfo}>
                     <span className={styles.chatName}>{chat.courseName}</span>
-                    <div className={styles.chatSub}>
+                    <div className={styles.chatSub} style={{ display: 'flex', alignItems: 'center', gap: 4, flexWrap: 'wrap' }}>
                       <span className="badge badge-green" style={{ fontSize: 9 }}>S{chat.semester}</span>
                       <span>{chat.block} Block</span>
+                      {chat.teacher && (
+                        <span className="badge badge-blue" style={{ fontSize: 9, background: 'var(--green-800)', borderColor: 'var(--green-600)' }}>
+                          {chat.teacher}
+                        </span>
+                      )}
                     </div>
                   </div>
                 </div>

@@ -228,3 +228,29 @@
 .emptyState svg { stroke: var(--text-muted); opacity: 0.4; }
 .emptyState p { font-size: 16px; font-weight: 600; color: var(--text-secondary); }
 .emptyState span { font-size: 13px; }
+
+.teacherFilterWrap {
+  display: flex;
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  padding: 4px;
+  border-radius: var(--radius-sm);
+}
+
+.teacherFilterSelect {
+  background: transparent;
+  border: none;
+  color: var(--text-primary);
+  font-size: 13px;
+  font-weight: 700;
+  padding: 4px 8px;
+  cursor: pointer;
+  outline: none;
+  border-radius: 4px;
+  transition: all var(--transition);
+}
+
+.teacherFilterSelect:hover {
+  background: var(--bg-hover);
+}
+
