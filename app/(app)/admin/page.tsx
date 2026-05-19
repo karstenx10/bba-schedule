@@ -417,13 +417,7 @@ export default function AdminPage() {
   };
   const handleUpdateGrade = (uid: string, grade: string) => updateUser(uid, { grade });
 
-  const handleFeedbackStatus = async (id: string, status: 'pending' | 'corrected' | 'flagged' | 'delete') => {
-    if (status === 'delete') {
-      if (!window.confirm('Are you sure you want to delete this feedback?')) return;
-      await deleteDoc(doc(db, 'feedback', id));
-      setFeedbackList(feedbackList.filter(f => f.id !== id));
-      return;
-    }
+  const handleFeedbackStatus = async (id: string, status: 'pending' | 'corrected' | 'flagged') => {
     await updateDoc(doc(db, 'feedback', id), { status });
     setFeedbackList(feedbackList.map(f => f.id === id ? { ...f, status } : f));
   };
@@ -1008,7 +1002,6 @@ export default function AdminPage() {
                       <option value="pending">Pending</option>
                       <option value="flagged">Flagged</option>
                       <option value="corrected">Corrected</option>
-                      <option value="delete" style={{ color: 'red' }}>Delete</option>
                     </select>
                   </td>
                 </tr>
