@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { doc, getDoc, setDoc, serverTimestamp, deleteDoc } from 'firebase/firestore';
+import { doc, getDoc, setDoc, serverTimestamp, deleteDoc, addDoc, collection } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { useAuth } from '@/context/AuthContext';
 import { COURSES, DEPARTMENTS, getCourseById, TEACHERS, Teacher } from '@/lib/courses';
@@ -376,6 +376,14 @@ export default function SchedulePage() {
     try {
       const data: ScheduleDoc = { ...docData, updatedAt: serverTimestamp() };
       await setDoc(doc(db, 'schedules', user.uid), data);
+
+      await addDoc(collection(db, 'logs'), {
+        uid: user.uid,
+        displayName: user.displayName ?? 'Student',
+        email: user.email ?? '',
+        type: 'schedule_save',
+        timestamp: serverTimestamp()
+      }).catch(console.error);
 
       // Update grade in user profile
       if (docData.grade) {

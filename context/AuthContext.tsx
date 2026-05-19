@@ -7,7 +7,7 @@ import {
   signInWithPopup,
   signOut as firebaseSignOut,
 } from 'firebase/auth';
-import { doc, getDoc, setDoc, updateDoc, serverTimestamp, onSnapshot } from 'firebase/firestore';
+import { doc, getDoc, setDoc, updateDoc, serverTimestamp, onSnapshot, addDoc, collection } from 'firebase/firestore';
 import { auth, db, googleProvider } from '@/lib/firebase';
 
 const ADMIN_EMAILS = ['kolsen29@burrburton.org', 'ebuikema29@burrburton.org'];
@@ -56,7 +56,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         
         // Ensure profile exists first
         const snap = await getDoc(ref);
-        if (!snap.exists()) {
+        const isNewUser = !snap.exists();
+        if (isNewUser) {
           const newProfile: UserProfile = {
             uid: u.uid,
             email: u.email ?? '',
@@ -66,6 +67,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             createdAt: serverTimestamp(),
           };
           await setDoc(ref, newProfile);
+        }
+
+        // Check if we already logged this session
+        const sessionKey = `logged_${u.uid}`;
+        if (!sessionStorage.getItem(sessionKey)) {
+          sessionStorage.setItem(sessionKey, 'true');
+          await addDoc(collection(db, 'logs'), {
+            uid: u.uid,
+            displayName: u.displayName ?? 'Student',
+            email: u.email ?? '',
+            type: isNewUser ? 'join' : 'login',
+            timestamp: serverTimestamp()
+          }).catch(console.error);
         }
 
         // Listen for real-time moderation updates
@@ -112,6 +126,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (profileUnsub) profileUnsub();
     };
   }, []);
+
+  useEffect(() => {
+    if (!user) return;
+    const ref = doc(db, 'users', user.uid);
+    // Update immediately
+    updateDoc(ref, { lastActive: serverTimestamp() }).catch(console.error);
+
+    // Update every 3 minutes
+    const interval = setInterval(() => {
+      updateDoc(ref, { lastActive: serverTimestamp() }).catch(console.error);
+    }, 3 * 60 * 1000);
+
+    return () => clearInterval(interval);
+  }, [user]);
 
   const signIn = async () => {
     setError(null);

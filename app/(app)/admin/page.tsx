@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import { useRouter } from 'next/navigation';
-import { collection, getDocs, doc, updateDoc, query, where, addDoc, serverTimestamp, setDoc, getDoc, orderBy } from 'firebase/firestore';
+import { collection, getDocs, doc, updateDoc, query, where, addDoc, serverTimestamp, setDoc, getDoc, orderBy, onSnapshot } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import styles from './admin.module.css';
 import Link from 'next/link';
@@ -16,6 +16,7 @@ interface UserProfile {
   isBanned?: boolean;
   timeoutUntil?: { toDate: () => Date } | null;
   forceLogout?: boolean;
+  lastActive?: any;
 }
 
 interface Chat {
@@ -43,11 +44,20 @@ interface Feedback {
   createdAt: any;
 }
 
+interface SystemLog {
+  id: string;
+  uid: string;
+  displayName: string;
+  email: string;
+  type: 'login' | 'join' | 'schedule_save';
+  timestamp: any;
+}
+
 export default function AdminPage() {
   const { user, isAdmin, loading: authLoading } = useAuth();
   const router = useRouter();
 
-  const [activeTab, setActiveTab] = useState<'users' | 'chats' | 'announcements' | 'feedback'>('users');
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'users' | 'chats' | 'announcements' | 'feedback'>('dashboard');
   const [users, setUsers] = useState<UserProfile[]>([]);
   const [chats, setChats] = useState<Chat[]>([]);
   const [dmChats, setDmChats] = useState<DmChat[]>([]);
@@ -55,6 +65,10 @@ export default function AdminPage() {
   const [feedbackList, setFeedbackList] = useState<Feedback[]>([]);
   const [loading, setLoading] = useState(true);
   const [chatSearch, setChatSearch] = useState('');
+
+  // Dashboard & Logs State
+  const [logs, setLogs] = useState<SystemLog[]>([]);
+  const [schedulesCount, setSchedulesCount] = useState(0);
 
   // Announcement State
   const [annTarget, setAnnTarget] = useState('all'); // 'all', '9', '10', '11', '12', or specific uid
@@ -86,6 +100,27 @@ export default function AdminPage() {
 
   useEffect(() => {
     if (isAdmin) loadData();
+  }, [isAdmin]);
+
+  useEffect(() => {
+    if (!isAdmin) return;
+
+    // Real-time subscription to logs
+    const logsQuery = query(collection(db, 'logs'), orderBy('timestamp', 'desc'));
+    const unsubLogs = onSnapshot(logsQuery, (snap) => {
+      setLogs(snap.docs.map(d => ({ id: d.id, ...d.data() } as SystemLog)));
+    });
+
+    // Real-time subscription to schedules completed count
+    const schedQuery = collection(db, 'schedules');
+    const unsubSched = onSnapshot(schedQuery, (snap) => {
+      setSchedulesCount(snap.size);
+    });
+
+    return () => {
+      unsubLogs();
+      unsubSched();
+    };
   }, [isAdmin]);
 
   const updateUser = async (uid: string, data: Partial<UserProfile>) => {
@@ -139,11 +174,101 @@ export default function AdminPage() {
       </div>
 
       <div className={styles.tabs}>
+        <button className={`${styles.tab} ${activeTab === 'dashboard' ? styles.active : ''}`} onClick={() => setActiveTab('dashboard')}>Dashboard</button>
         <button className={`${styles.tab} ${activeTab === 'users' ? styles.active : ''}`} onClick={() => setActiveTab('users')}>Users</button>
         <button className={`${styles.tab} ${activeTab === 'chats' ? styles.active : ''}`} onClick={() => { setActiveTab('chats'); setChatSearch(''); }}>Chats</button>
         <button className={`${styles.tab} ${activeTab === 'announcements' ? styles.active : ''}`} onClick={() => setActiveTab('announcements')}>Announcements</button>
         <button className={`${styles.tab} ${activeTab === 'feedback' ? styles.active : ''}`} onClick={() => setActiveTab('feedback')}>User Feedback</button>
       </div>
+
+      {activeTab === 'dashboard' && (
+        <div className="fade-in">
+          {/* Dashboard Metrics Grid */}
+          <div className={styles.dashboardGrid}>
+            <div className={styles.statCard}>
+              <div className={styles.statHeader}>
+                <span className={styles.pulsingDot}></span>
+                <h3>Active Right Now</h3>
+              </div>
+              <div className={styles.statValue}>
+                {users.filter(u => {
+                  if (!u.lastActive) return false;
+                  const activeDate = typeof (u.lastActive as any).toDate === 'function' 
+                    ? (u.lastActive as any).toDate() 
+                    : new Date(u.lastActive as any);
+                  const fiveMinutesAgo = new Date();
+                  fiveMinutesAgo.setMinutes(fiveMinutesAgo.getMinutes() - 5);
+                  return activeDate > fiveMinutesAgo;
+                }).length}
+              </div>
+              <div className={styles.statSubText}>Students active in last 5m</div>
+            </div>
+
+            <div className={styles.statCard}>
+              <div className={styles.statHeader}>
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ stroke: 'var(--accent)' }}>
+                  <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/>
+                  <polyline points="22 4 12 14.01 9 11.01"/>
+                </svg>
+                <h3>Schedules Completed</h3>
+              </div>
+              <div className={styles.statValue}>
+                {schedulesCount} <span className={styles.statMax}>/ {users.length}</span>
+              </div>
+              <div className={styles.statProgressBarWrap}>
+                <div className={styles.statProgressBar} style={{ width: `${users.length > 0 ? (schedulesCount / users.length) * 100 : 0}%` }}></div>
+              </div>
+              <div className={styles.statSubText}>{users.length > 0 ? Math.round((schedulesCount / users.length) * 100) : 0}% of student body</div>
+            </div>
+          </div>
+
+          {/* Real-time Logger Terminal */}
+          <div className={styles.terminalContainer}>
+            <div className={styles.terminalHeader}>
+              <div className={styles.terminalButtons}>
+                <span className={styles.termRed}></span>
+                <span className={styles.termYellow}></span>
+                <span className={styles.termGreen}></span>
+              </div>
+              <span className={styles.terminalTitle}>student_session_join.log</span>
+            </div>
+            <div className={styles.terminalBody}>
+              {logs.slice(0, 50).map((log) => {
+                let typeBadge = 'AUTH';
+                let badgeClass = styles.badgeAuth;
+                let details = 'Logged into platform session';
+
+                if (log.type === 'join') {
+                  typeBadge = 'JOIN';
+                  badgeClass = styles.badgeJoin;
+                  details = 'Created schedule profile for the first time';
+                } else if (log.type === 'schedule_save') {
+                  typeBadge = 'SAVE';
+                  badgeClass = styles.badgeSave;
+                  details = 'Saved schedule blocks to the database';
+                }
+
+                const logTime = log.timestamp?.toDate 
+                  ? log.timestamp.toDate().toLocaleString() 
+                  : new Date().toLocaleString();
+
+                return (
+                  <div key={log.id} className={styles.terminalLine}>
+                    <span className={styles.termTimestamp}>[{logTime}]</span>
+                    <span className={`${styles.termBadge} ${badgeClass}`}>{typeBadge}</span>
+                    <span className={styles.termName}>{log.displayName}</span>
+                    <span className={styles.termEmail}>({log.email})</span>
+                    <span className={styles.termMessage}>{details}</span>
+                  </div>
+                );
+              })}
+              {logs.length === 0 && (
+                <div className={styles.terminalEmpty}>Listening for live student connections...</div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
 
       {activeTab === 'users' && (
         <div className={styles.tableWrap}>
