@@ -13,6 +13,8 @@ interface Announcement {
   id: string;
   text: string;
   target: string;
+  type?: 'announcement' | 'update' | 'downtime';
+  viewable?: boolean;
 }
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
@@ -37,11 +39,17 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       let activeAnn: Announcement | null = null;
       for (const d of snap.docs) {
         const data = d.data();
+        if (data.viewable === false) continue; // Skip non-viewable announcements
         if (profile.dismissedAnnouncements?.includes(d.id)) continue;
         
         const t = data.target;
         if (t === 'all' || t === profile.grade || t === profile.uid) {
-          activeAnn = { id: d.id, text: data.text, target: t };
+          activeAnn = { 
+            id: d.id, 
+            text: data.text, 
+            target: t, 
+            type: data.type || 'announcement' 
+          };
           break;
         }
       }
@@ -72,9 +80,21 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       <Navbar />
       <main className={styles.main}>
         {announcement && (
-          <div className={styles.banner}>
+          <div className={`${styles.banner} ${
+            announcement.type === 'update' 
+              ? styles.bannerUpdate 
+              : announcement.type === 'downtime' 
+                ? styles.bannerDowntime 
+                : ''
+          }`}>
             <div className={styles.bannerText}>
-              <strong style={{ marginRight: 8 }}>Announcement:</strong>
+              <strong style={{ marginRight: 8 }}>
+                {announcement.type === 'update' 
+                  ? 'System Update:' 
+                  : announcement.type === 'downtime' 
+                    ? 'Maintenance Warning:' 
+                    : 'Announcement:'}
+              </strong>
               {announcement.text}
             </div>
             <button className={styles.bannerClose} onClick={dismissAnnouncement} title="Dismiss">

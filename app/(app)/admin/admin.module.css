@@ -183,3 +183,279 @@
   min-height: 120px;
   resize: vertical;
 }
+
+/* Dashboard & Logs Styles */
+.dashboardGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 20px;
+  margin-bottom: 32px;
+}
+
+.statCard {
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  position: relative;
+  overflow: hidden;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+}
+
+.statHeader {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.statHeader h3 {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-muted);
+  margin: 0;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.statValue {
+  font-size: 36px;
+  font-weight: 800;
+  color: var(--text-primary);
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+}
+
+.statMax {
+  font-size: 16px;
+  color: var(--text-muted);
+  font-weight: 500;
+}
+
+.statSubText {
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.statProgressBarWrap {
+  width: 100%;
+  height: 6px;
+  background: var(--bg-raised);
+  border-radius: 3px;
+  overflow: hidden;
+  margin-top: 4px;
+}
+
+.statProgressBar {
+  height: 100%;
+  background: linear-gradient(90deg, var(--green-500), var(--accent));
+  border-radius: 3px;
+  transition: width 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Pulsing neon active status dot */
+.pulsingDot {
+  width: 8px;
+  height: 8px;
+  background-color: #22c55e;
+  border-radius: 50%;
+  box-shadow: 0 0 0 0 rgba(34, 197, 94, 0.7);
+  animation: pulse 1.6s infinite;
+}
+
+@keyframes pulse {
+  0% {
+    transform: scale(0.95);
+    box-shadow: 0 0 0 0 rgba(34, 197, 94, 0.7);
+  }
+  70% {
+    transform: scale(1);
+    box-shadow: 0 0 0 6px rgba(34, 197, 94, 0);
+  }
+  100% {
+    transform: scale(0.95);
+    box-shadow: 0 0 0 0 rgba(34, 197, 94, 0);
+  }
+}
+
+/* Join Log Console Terminal */
+.terminalContainer {
+  background: #0f172a;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  overflow: hidden;
+  box-shadow: 0 12px 36px rgba(0,0,0,0.3);
+  font-family: var(--font-mono, ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace);
+}
+
+.terminalHeader {
+  background: #1e293b;
+  padding: 12px 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 1px solid #334155;
+}
+
+.terminalButtons {
+  display: flex;
+  gap: 6px;
+}
+
+.termRed, .termYellow, .termGreen {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  display: inline-block;
+}
+
+.termRed { background: #ef4444; }
+.termYellow { background: #f59e0b; }
+.termGreen { background: #10b981; }
+
+.terminalTitle {
+  font-size: 12px;
+  color: #94a3b8;
+  font-weight: 500;
+}
+
+.terminalBody {
+  padding: 16px;
+  max-height: 400px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-height: 250px;
+}
+
+.terminalLine {
+  font-size: 13px;
+  line-height: 1.5;
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  animation: slideInUp 0.15s ease-out;
+}
+
+@keyframes slideInUp {
+  from { opacity: 0; transform: translateY(4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.termTimestamp {
+  color: #64748b;
+}
+
+.termBadge {
+  font-size: 10px;
+  font-weight: 700;
+  padding: 2px 6px;
+  border-radius: 4px;
+  text-transform: uppercase;
+}
+
+.badgeJoin {
+  background: rgba(16, 185, 129, 0.15);
+  color: #34d399;
+}
+
+.badgeAuth {
+  background: rgba(59, 130, 246, 0.15);
+  color: #60a5fa;
+}
+
+.badgeSave {
+  background: rgba(245, 158, 11, 0.15);
+  color: #fbbf24;
+}
+
+.termName {
+  color: #f8fafc;
+  font-weight: 600;
+}
+
+.termEmail {
+  color: #475569;
+  font-size: 11px;
+}
+
+.termMessage {
+  color: #cbd5e1;
+}
+
+.terminalEmpty {
+  color: #475569;
+  font-size: 13px;
+  text-align: center;
+  padding: 48px 0;
+  font-style: italic;
+}
+
+.terminalInputRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 0 0 0;
+  border-top: 1px dashed #334155;
+  margin-top: 8px;
+}
+
+.termPrompt {
+  color: var(--accent);
+  font-weight: bold;
+  font-size: 14px;
+}
+
+.termInput {
+  background: transparent;
+  border: none;
+  outline: none;
+  color: #f8fafc;
+  font-family: inherit;
+  font-size: 13px;
+  flex: 1;
+}
+
+.badgeCmd {
+  background: rgba(139, 92, 246, 0.15);
+  color: #a78bfa;
+}
+
+.badgeOut {
+  background: rgba(244, 63, 94, 0.15);
+  color: #fb7185;
+}
+
+.announcementDashboard {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 24px;
+}
+
+@media (min-width: 950px) {
+  .announcementDashboard {
+    grid-template-columns: 380px 1fr;
+  }
+}
+
+.badgeTypeAnn {
+  background: rgba(59, 130, 246, 0.2);
+  color: #60a5fa;
+}
+
+.badgeTypeUpdate {
+  background: rgba(16, 185, 129, 0.2);
+  color: #34d399;
+}
+
+.badgeTypeDowntime {
+  background: rgba(245, 158, 11, 0.2);
+  color: #fbbf24;
+}
+
+

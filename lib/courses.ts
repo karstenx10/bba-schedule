@@ -311,6 +311,7 @@ export const TEACHERS: Teacher[] = [
   { name: 'Thomas von Allmen', email: 'tvonallmen@burrburton.org', role: 'Social Studies Teacher', departments: ['Social Studies'] },
   { name: 'Mr. Jonathan Wilson', email: 'jwilson@burrburton.org', role: 'Social Studies Teacher', departments: ['Social Studies'] },
   { name: 'Madison Wilson', email: 'mwilson@burrburton.org', role: 'Staff', departments: ['Flexible Pathways'] },
+  { name: 'Karen Witalec-Krupa', email: 'kwitaleckrupa@burrburton.org', role: 'English Teacher', departments: ['English'] },
   { name: 'Ms. Amy Wright', email: 'awright@burrburton.org', role: 'Director of Technology', departments: ['CS & Engineering', 'Flexible Pathways'] },
   { name: 'Patrick Zilkha', email: 'Pzilkha@burrburton.org', role: 'Math Teacher', departments: ['Mathematics'] },
 ];
