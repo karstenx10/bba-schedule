@@ -87,6 +87,9 @@ export default function LoginPage() {
         <p className={styles.note}>
           Only <strong>@burrburton.org</strong> accounts are permitted.
         </p>
+        <p className={styles.credit}>
+          Made by Karsten and Ellis
+        </p>
       </div>
     </div>
   );
