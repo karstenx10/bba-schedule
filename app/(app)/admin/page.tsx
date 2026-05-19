@@ -27,14 +27,7 @@ interface Chat {
   semester: number;
 }
 
-interface DmChat {
-  id: string;
-  participants: string[];
-  lastMessageText?: string;
-  lastMessageSenderName?: string;
-  lastMessageSenderUid?: string;
-  lastMessageAt?: { toDate: () => Date } | null;
-}
+
 
 interface Feedback {
   id: string;
@@ -61,8 +54,7 @@ export default function AdminPage() {
   const [activeTab, setActiveTab] = useState<'dashboard' | 'users' | 'chats' | 'announcements' | 'feedback'>('dashboard');
   const [users, setUsers] = useState<UserProfile[]>([]);
   const [chats, setChats] = useState<Chat[]>([]);
-  const [dmChats, setDmChats] = useState<DmChat[]>([]);
-  const [chatSubTab, setChatSubTab] = useState<'class' | 'dm'>('class');
+
   const [feedbackList, setFeedbackList] = useState<Feedback[]>([]);
   const [loading, setLoading] = useState(true);
   const [chatSearch, setChatSearch] = useState('');
@@ -119,8 +111,7 @@ export default function AdminPage() {
     const cSnap = await getDocs(query(collection(db, 'chats'), where('type', '==', 'class')));
     setChats(cSnap.docs.map(d => ({ id: d.id, ...d.data() } as Chat)));
 
-    const dmSnap = await getDocs(query(collection(db, 'chats'), where('type', '==', 'dm')));
-    setDmChats(dmSnap.docs.map(d => ({ id: d.id, ...d.data() } as DmChat)));
+
 
     const fSnap = await getDocs(query(collection(db, 'feedback'), orderBy('createdAt', 'desc')));
     setFeedbackList(fSnap.docs.map(d => ({ id: d.id, ...d.data() } as Feedback)));
@@ -624,8 +615,12 @@ export default function AdminPage() {
 
       {activeTab === 'users' && (
         <div className={styles.tableWrap}>
-          <div style={{ marginBottom: '16px', color: 'var(--text-secondary)', fontSize: '14px', fontWeight: '500' }}>
-            Total Users: <span style={{ color: 'var(--text-primary)', fontWeight: 'bold' }}>{users.length}</span>
+          <div style={{ marginBottom: '16px', color: 'var(--text-secondary)', fontSize: '14px', fontWeight: '500', display: 'flex', gap: '20px', flexWrap: 'wrap' }}>
+            <span>Total Users: <span style={{ color: 'var(--text-primary)', fontWeight: 'bold' }}>{users.length}</span></span>
+            <span>9th: <span style={{ color: 'var(--text-primary)', fontWeight: 'bold' }}>{users.filter(u => u.grade === '9').length}</span></span>
+            <span>10th: <span style={{ color: 'var(--text-primary)', fontWeight: 'bold' }}>{users.filter(u => u.grade === '10').length}</span></span>
+            <span>11th: <span style={{ color: 'var(--text-primary)', fontWeight: 'bold' }}>{users.filter(u => u.grade === '11').length}</span></span>
+            <span>12th: <span style={{ color: 'var(--text-primary)', fontWeight: 'bold' }}>{users.filter(u => u.grade === '12').length}</span></span>
           </div>
           <table className={styles.table}>
             <thead>
@@ -688,43 +683,11 @@ export default function AdminPage() {
 
       {activeTab === 'chats' && (
         <div>
-          {/* Sub tabs for Class Chats vs DMs */}
-          <div style={{ display: 'flex', gap: 12, marginBottom: 16 }}>
-            <button
-              className={`${styles.actionBtn}`}
-              style={{
-                padding: '8px 16px',
-                fontSize: '13px',
-                fontWeight: '600',
-                background: chatSubTab === 'class' ? 'var(--accent)' : 'var(--bg-raised)',
-                color: chatSubTab === 'class' ? 'black' : 'var(--text-primary)',
-                borderColor: chatSubTab === 'class' ? 'var(--accent)' : 'var(--border)'
-              }}
-              onClick={() => { setChatSubTab('class'); setChatSearch(''); }}
-            >
-              Class Chats
-            </button>
-            <button
-              className={`${styles.actionBtn}`}
-              style={{
-                padding: '8px 16px',
-                fontSize: '13px',
-                fontWeight: '600',
-                background: chatSubTab === 'dm' ? 'var(--accent)' : 'var(--bg-raised)',
-                color: chatSubTab === 'dm' ? 'black' : 'var(--text-primary)',
-                borderColor: chatSubTab === 'dm' ? 'var(--accent)' : 'var(--border)'
-              }}
-              onClick={() => { setChatSubTab('dm'); setChatSearch(''); }}
-            >
-              Direct Messages (DMs)
-            </button>
-          </div>
-
           <div className={styles.tableWrap}>
             <div style={{ padding: 16, borderBottom: '1px solid var(--border)' }}>
               <input
                 type="text"
-                placeholder={chatSubTab === 'class' ? "Search course name or block..." : "Search student names..."}
+                placeholder="Search course name or block..."
                 value={chatSearch}
                 onChange={(e) => setChatSearch(e.target.value)}
                 className={styles.searchInput}
@@ -732,92 +695,36 @@ export default function AdminPage() {
               />
             </div>
 
-            {chatSubTab === 'class' ? (
-              <table className={styles.table}>
-                <thead>
-                  <tr>
-                    <th>Course</th>
-                    <th>Block</th>
-                    <th>Semester</th>
-                    <th>Action</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {chats
-                    .filter(c =>
-                      c.courseName.toLowerCase().includes(chatSearch.toLowerCase()) ||
-                      c.block.toLowerCase().includes(chatSearch.toLowerCase())
-                    )
-                    .map(c => (
-                      <tr key={c.id}>
-                        <td><strong>{c.courseName}</strong></td>
-                        <td>{c.block} Block</td>
-                        <td>S{c.semester}</td>
-                        <td>
-                          <Link href={`/chat-room?id=${c.id}`} className={styles.actionBtn}>View Chat</Link>
-                        </td>
-                      </tr>
-                    ))}
-                  {chats.length === 0 && (
-                    <tr><td colSpan={4} style={{ textAlign: 'center', padding: 20 }}>No class chats exist yet.</td></tr>
-                  )}
-                </tbody>
-              </table>
-            ) : (
-              <table className={styles.table}>
-                <thead>
-                  <tr>
-                    <th>Participants</th>
-                    <th>Latest Sender</th>
-                    <th>Latest Message</th>
-                    <th>Last Active</th>
-                    <th>Action</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {dmChats
-                    .map(dm => {
-                      const names = dm.participants
-                        .map(uid => users.find(u => u.uid === uid)?.displayName || 'Unknown')
-                        .join(' & ');
-                      return { ...dm, names };
-                    })
-                    .filter(dm => dm.names.toLowerCase().includes(chatSearch.toLowerCase()))
-                    .map(dm => (
-                      <tr key={dm.id}>
-                        <td><strong>{dm.names}</strong></td>
-                        <td>
-                          {dm.lastMessageSenderName ? (
-                            <span>{dm.lastMessageSenderName}</span>
-                          ) : (
-                            <span style={{ color: 'var(--text-muted)' }}>-</span>
-                          )}
-                        </td>
-                        <td style={{ maxWidth: '300px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                          {dm.lastMessageText ? (
-                            <span>{dm.lastMessageText}</span>
-                          ) : (
-                            <span style={{ color: 'var(--text-muted)' }}>No messages yet</span>
-                          )}
-                        </td>
-                        <td>
-                          {dm.lastMessageAt ? (
-                            <span>{dm.lastMessageAt.toDate().toLocaleString()}</span>
-                          ) : (
-                            <span style={{ color: 'var(--text-muted)' }}>-</span>
-                          )}
-                        </td>
-                        <td>
-                          <Link href={`/chat-room?id=${dm.id}`} className={styles.actionBtn}>View Chat</Link>
-                        </td>
-                      </tr>
-                    ))}
-                  {dmChats.length === 0 && (
-                    <tr><td colSpan={5} style={{ textAlign: 'center', padding: 20 }}>No direct messages exist yet.</td></tr>
-                  )}
-                </tbody>
-              </table>
-            )}
+            <table className={styles.table}>
+              <thead>
+                <tr>
+                  <th>Course</th>
+                  <th>Block</th>
+                  <th>Semester</th>
+                  <th>Action</th>
+                </tr>
+              </thead>
+              <tbody>
+                {chats
+                  .filter(c =>
+                    c.courseName.toLowerCase().includes(chatSearch.toLowerCase()) ||
+                    c.block.toLowerCase().includes(chatSearch.toLowerCase())
+                  )
+                  .map(c => (
+                    <tr key={c.id}>
+                      <td><strong>{c.courseName}</strong></td>
+                      <td>{c.block} Block</td>
+                      <td>S{c.semester}</td>
+                      <td>
+                        <Link href={`/chat-room?id=${c.id}`} className={styles.actionBtn}>View Chat</Link>
+                      </td>
+                    </tr>
+                  ))}
+                {chats.length === 0 && (
+                  <tr><td colSpan={4} style={{ textAlign: 'center', padding: 20 }}>No class chats exist yet.</td></tr>
+                )}
+              </tbody>
+            </table>
           </div>
         </div>
       )}
