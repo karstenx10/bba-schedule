@@ -76,3 +76,29 @@
   opacity: 1;
   background: rgba(0,0,0,0.1);
 }
+
+.bannerUpdate {
+  background: #10b981;
+  color: #fff;
+}
+
+.bannerUpdate svg {
+  color: #fff;
+}
+
+.bannerUpdate button:hover {
+  background: rgba(255,255,255,0.15);
+}
+
+.bannerDowntime {
+  background: #f59e0b;
+  color: #000;
+}
+
+.bannerDowntime svg {
+  color: #000;
+}
+
+.bannerDowntime button:hover {
+  background: rgba(0,0,0,0.15);
+}

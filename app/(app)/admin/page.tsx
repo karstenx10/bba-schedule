@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import { useRouter } from 'next/navigation';
-import { collection, getDocs, doc, updateDoc, query, where, addDoc, serverTimestamp, setDoc, getDoc, orderBy, onSnapshot } from 'firebase/firestore';
+import { collection, getDocs, doc, updateDoc, query, where, addDoc, serverTimestamp, setDoc, getDoc, orderBy, onSnapshot, deleteDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import styles from './admin.module.css';
 import Link from 'next/link';
@@ -87,6 +87,18 @@ export default function AdminPage() {
 
   const terminalBodyRef = useRef<HTMLDivElement>(null);
 
+  interface Announcement {
+    id: string;
+    text: string;
+    target: string;
+    type?: 'announcement' | 'update' | 'downtime';
+    viewable?: boolean;
+    createdAt: any;
+  }
+
+  const [announcementsList, setAnnouncementsList] = useState<Announcement[]>([]);
+  const [annType, setAnnType] = useState<'announcement' | 'update' | 'downtime'>('announcement');
+
   // Announcement State
   const [annTarget, setAnnTarget] = useState('all'); // 'all', '9', '10', '11', '12', or specific uid
   const [annMessage, setAnnMessage] = useState('');
@@ -139,9 +151,16 @@ export default function AdminPage() {
       }));
     });
 
+    // Real-time subscription to announcements list
+    const annQuery = query(collection(db, 'announcements'), orderBy('createdAt', 'desc'));
+    const unsubAnn = onSnapshot(annQuery, (snap) => {
+      setAnnouncementsList(snap.docs.map(d => ({ id: d.id, ...d.data() } as Announcement)));
+    });
+
     return () => {
       unsubLogs();
       unsubSched();
+      unsubAnn();
     };
   }, [isAdmin]);
 
@@ -326,16 +345,30 @@ export default function AdminPage() {
       await addDoc(collection(db, 'announcements'), {
         text: annMessage.trim(),
         target: annTarget,
+        type: annType,
+        viewable: true,
         createdAt: serverTimestamp()
       });
 
       setAnnMessage('');
-      alert('Announcement sent globally!');
+      alert('Announcement sent successfully!');
     } catch (err) {
       console.error(err);
       alert('Failed to send announcement');
     }
     setAnnSending(false);
+  };
+
+  const toggleAnnouncementVisibility = async (id: string, currentViewable: boolean) => {
+    await updateDoc(doc(db, 'announcements', id), {
+      viewable: !currentViewable
+    });
+  };
+
+  const deleteAnnouncement = async (id: string) => {
+    if (window.confirm('Are you sure you want to permanently delete this announcement? It will disappear from everyone\'s screen.')) {
+      await deleteDoc(doc(db, 'announcements', id));
+    }
   };
 
   if (authLoading || !isAdmin || loading) {
@@ -668,38 +701,143 @@ export default function AdminPage() {
       )}
 
       {activeTab === 'announcements' && (
-        <div className={styles.announcementForm}>
-          <h2 style={{ marginBottom: 16 }}>Send Announcement</h2>
-          <div className={styles.formGroup}>
-            <label>Target Audience</label>
-            <select value={annTarget} onChange={(e) => setAnnTarget(e.target.value)}>
-              <option value="all">Everyone</option>
-              <option value="9">9th Grade</option>
-              <option value="10">10th Grade</option>
-              <option value="11">11th Grade</option>
-              <option value="12">12th Grade</option>
-              <optgroup label="Specific Users">
-                {users.map(u => (
-                  <option key={u.uid} value={u.uid}>{u.displayName} ({u.email})</option>
-                ))}
-              </optgroup>
-            </select>
+        <div className={styles.announcementDashboard}>
+          {/* Create Announcement Form */}
+          <div className={styles.announcementForm} style={{ maxWidth: '100%' }}>
+            <h2 style={{ marginBottom: 16 }}>Send Announcement</h2>
+            
+            <div className={styles.formGroup}>
+              <label>Target Audience</label>
+              <select value={annTarget} onChange={(e) => setAnnTarget(e.target.value)}>
+                <option value="all">Everyone</option>
+                <option value="9">9th Grade</option>
+                <option value="10">10th Grade</option>
+                <option value="11">11th Grade</option>
+                <option value="12">12th Grade</option>
+                <optgroup label="Specific Users">
+                  {users.map(u => (
+                    <option key={u.uid} value={u.uid}>{u.displayName} ({u.email})</option>
+                  ))}
+                </optgroup>
+              </select>
+            </div>
+
+            <div className={styles.formGroup}>
+              <label>Announcement Type</label>
+              <select value={annType} onChange={(e) => setAnnType(e.target.value as any)}>
+                <option value="announcement">Announcement (Default Blue)</option>
+                <option value="update">System Update (Premium Green)</option>
+                <option value="downtime">Maintenance Warning (Orange/Red)</option>
+              </select>
+            </div>
+
+            <div className={styles.formGroup}>
+              <label>Message</label>
+              <textarea 
+                placeholder="Write your announcement here. It will appear as a banner at the top of the website for the selected users."
+                value={annMessage}
+                onChange={(e) => setAnnMessage(e.target.value)}
+              />
+            </div>
+
+            <button 
+              className="btn btn-primary" 
+              onClick={sendAnnouncement}
+              disabled={!annMessage.trim() || annSending}
+              style={{ width: '100%' }}
+            >
+              {annSending ? 'Sending...' : 'Send Announcement'}
+            </button>
           </div>
-          <div className={styles.formGroup}>
-            <label>Message</label>
-            <textarea 
-              placeholder="Write your announcement here. It will appear as a banner at the top of the website for the selected users."
-              value={annMessage}
-              onChange={(e) => setAnnMessage(e.target.value)}
-            />
+
+          {/* Announcements Tally Table */}
+          <div className={styles.tableWrap}>
+            <div style={{ padding: '16px 20px', borderBottom: '1px solid var(--border)', background: 'var(--bg-raised)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <h3 style={{ fontSize: '15px', fontWeight: 600 }}>Active & Dismissed Announcements</h3>
+              <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>Total: {announcementsList.length}</span>
+            </div>
+            <table className={styles.table}>
+              <thead>
+                <tr>
+                  <th>Type</th>
+                  <th>Target</th>
+                  <th>Message</th>
+                  <th>Status</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {announcementsList.map(ann => {
+                  let targetName = 'Everyone';
+                  if (ann.target !== 'all') {
+                    if (['9', '10', '11', '12'].includes(ann.target)) {
+                      targetName = `${ann.target}th Grade`;
+                    } else {
+                      const matchedUser = users.find(u => u.uid === ann.target);
+                      targetName = matchedUser ? matchedUser.displayName : 'Specific User';
+                    }
+                  }
+
+                  let typeBadge = styles.badgeTypeAnn;
+                  let typeText = 'General';
+                  if (ann.type === 'update') {
+                    typeBadge = styles.badgeTypeUpdate;
+                    typeText = 'Update';
+                  } else if (ann.type === 'downtime') {
+                    typeBadge = styles.badgeTypeDowntime;
+                    typeText = 'Downtime';
+                  }
+
+                  const isViewable = ann.viewable !== false;
+
+                  return (
+                    <tr key={ann.id}>
+                      <td>
+                        <span className={`${styles.status} ${typeBadge}`}>{typeText}</span>
+                      </td>
+                      <td>
+                        <strong>{targetName}</strong>
+                      </td>
+                      <td style={{ maxWidth: '280px', wordBreak: 'break-word', fontSize: '13px' }}>
+                        {ann.text}
+                      </td>
+                      <td>
+                        {isViewable ? (
+                          <span className={`${styles.status} ${styles.badgeTypeUpdate}`} style={{ padding: '2px 8px' }}>Active</span>
+                        ) : (
+                          <span className={`${styles.status} ${styles.badgeOut}`} style={{ padding: '2px 8px' }}>Hidden</span>
+                        )}
+                      </td>
+                      <td>
+                        <div className={styles.actions}>
+                          <button 
+                            className={styles.actionBtn}
+                            onClick={() => toggleAnnouncementVisibility(ann.id, isViewable)}
+                          >
+                            {isViewable ? 'Hide' : 'Show'}
+                          </button>
+                          <button 
+                            className={`${styles.actionBtn} ${styles.danger}`}
+                            style={{ color: '#ef4444', borderColor: 'rgba(239, 68, 68, 0.2)' }}
+                            onClick={() => deleteAnnouncement(ann.id)}
+                          >
+                            Delete
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
+                {announcementsList.length === 0 && (
+                  <tr>
+                    <td colSpan={5} style={{ textAlign: 'center', padding: '30px', color: 'var(--text-muted)' }}>
+                      No announcements sent yet. Write one using the panel on the left!
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
           </div>
-          <button 
-            className="btn btn-primary" 
-            onClick={sendAnnouncement}
-            disabled={!annMessage.trim() || annSending}
-          >
-            {annSending ? 'Sending...' : 'Send Announcement'}
-          </button>
         </div>
       )}
 

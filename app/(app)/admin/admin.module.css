@@ -431,4 +431,31 @@
   color: #fb7185;
 }
 
+.announcementDashboard {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 24px;
+}
+
+@media (min-width: 950px) {
+  .announcementDashboard {
+    grid-template-columns: 380px 1fr;
+  }
+}
+
+.badgeTypeAnn {
+  background: rgba(59, 130, 246, 0.2);
+  color: #60a5fa;
+}
+
+.badgeTypeUpdate {
+  background: rgba(16, 185, 129, 0.2);
+  color: #34d399;
+}
+
+.badgeTypeDowntime {
+  background: rgba(245, 158, 11, 0.2);
+  color: #fbbf24;
+}
+
 
