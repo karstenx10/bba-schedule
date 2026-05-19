@@ -124,7 +124,7 @@ export default function AdminPage() {
 
     const fSnap = await getDocs(query(collection(db, 'feedback'), orderBy('createdAt', 'desc')));
     setFeedbackList(fSnap.docs.map(d => ({ id: d.id, ...d.data() } as Feedback)));
-    
+
     setLoading(false);
   };
 
@@ -216,10 +216,10 @@ export default function AdminPage() {
 
       if (enriched.length > 0) {
         const orderStr = cleanCmd === 'recent' ? 'Most Recent First' : 'Beginning to End';
-        outputMsg = `Completed schedules (${enriched.length}) - [Sorted: ${orderStr}]:\n` + 
+        outputMsg = `Completed schedules (${enriched.length}) - [Sorted: ${orderStr}]:\n` +
           enriched.map((u, i) => {
-            const timeStr = u.completedAt 
-              ? u.completedAt.toLocaleString() 
+            const timeStr = u.completedAt
+              ? u.completedAt.toLocaleString()
               : 'Unknown Time';
             return `  ${i + 1}. ${u.displayName} (${u.email}) [Grade: ${u.grade || 'N/A'}] - Completed: ${timeStr}`;
           }).join('\n');
@@ -231,7 +231,7 @@ export default function AdminPage() {
         const schedSnap = await getDocs(collection(db, 'schedules'));
         const totalUsersCount = users.length;
         const totalSchedulesCount = schedSnap.size;
-        
+
         let completedTeachersCount = 0;
         const completedUsers: { displayName: string; email: string; grade: string }[] = [];
 
@@ -239,7 +239,7 @@ export default function AdminPage() {
           const data = docSnap.data();
           const uid = docSnap.id;
           const userProfile = users.find(u => u.uid === uid);
-          
+
           if (!userProfile) return;
 
           let hasClasses = false;
@@ -295,16 +295,16 @@ export default function AdminPage() {
         const pctSched = totalSchedulesCount > 0 ? Math.round((completedTeachersCount / totalSchedulesCount) * 100) : 0;
 
         outputMsg = `Teacher Selection Completeness Report:\n` +
-                    `----------------------------------------\n` +
-                    `Total Registered Users: ${totalUsersCount}\n` +
-                    `Saved Schedules Count: ${totalSchedulesCount}\n` +
-                    `Completed Teacher Selection for ALL Classes: ${completedTeachersCount}\n` +
-                    `Percentage of Total Student Body: ${pctBody}%\n` +
-                    `Percentage of Saved Schedules: ${pctSched}%\n\n` +
-                    `Students who completed teacher selections for all saved blocks:\n` +
-                    (completedUsers.length > 0
-                      ? completedUsers.map((u, idx) => `  ${idx + 1}. ${u.displayName} (${u.email}) [Grade: ${u.grade}]`).join('\n')
-                      : '  No students have fully selected teachers for all their classes yet.');
+          `----------------------------------------\n` +
+          `Total Registered Users: ${totalUsersCount}\n` +
+          `Saved Schedules Count: ${totalSchedulesCount}\n` +
+          `Completed Teacher Selection for ALL Classes: ${completedTeachersCount}\n` +
+          `Percentage of Total Student Body: ${pctBody}%\n` +
+          `Percentage of Saved Schedules: ${pctSched}%\n\n` +
+          `Students who completed teacher selections for all saved blocks:\n` +
+          (completedUsers.length > 0
+            ? completedUsers.map((u, idx) => `  ${idx + 1}. ${u.displayName} (${u.email}) [Grade: ${u.grade}]`).join('\n')
+            : '  No students have fully selected teachers for all their classes yet.');
 
       } catch (err) {
         console.error(err);
@@ -351,10 +351,10 @@ export default function AdminPage() {
     // 2. Map reactive real-time logs from Firestore logs state
     const firestoreLogs = logs
       .map(log => {
-        const timestamp = log.timestamp?.toDate 
-          ? log.timestamp.toDate() 
+        const timestamp = log.timestamp?.toDate
+          ? log.timestamp.toDate()
           : new Date();
-        
+
         let details = 'Came online';
         if (log.type === 'join') details = 'Created schedule profile for the first time';
         else if (log.type === 'schedule_save') details = 'Saved schedule blocks to the database';
@@ -417,7 +417,13 @@ export default function AdminPage() {
   };
   const handleUpdateGrade = (uid: string, grade: string) => updateUser(uid, { grade });
 
-  const handleFeedbackStatus = async (id: string, status: 'pending' | 'corrected' | 'flagged') => {
+  const handleFeedbackStatus = async (id: string, status: 'pending' | 'corrected' | 'flagged' | 'delete') => {
+    if (status === 'delete') {
+      if (!window.confirm('Are you sure you want to delete this feedback?')) return;
+      await deleteDoc(doc(db, 'feedback', id));
+      setFeedbackList(feedbackList.filter(f => f.id !== id));
+      return;
+    }
     await updateDoc(doc(db, 'feedback', id), { status });
     setFeedbackList(feedbackList.map(f => f.id === id ? { ...f, status } : f));
   };
@@ -514,8 +520,8 @@ export default function AdminPage() {
               <div className={styles.statValue}>
                 {users.filter(u => {
                   if (!u.lastActive) return false;
-                  const activeDate = typeof (u.lastActive as any).toDate === 'function' 
-                    ? (u.lastActive as any).toDate() 
+                  const activeDate = typeof (u.lastActive as any).toDate === 'function'
+                    ? (u.lastActive as any).toDate()
                     : new Date(u.lastActive as any);
                   const fiveMinutesAgo = new Date();
                   fiveMinutesAgo.setMinutes(fiveMinutesAgo.getMinutes() - 5);
@@ -528,8 +534,8 @@ export default function AdminPage() {
             <div className={styles.statCard}>
               <div className={styles.statHeader}>
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ stroke: 'var(--accent)' }}>
-                  <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/>
-                  <polyline points="22 4 12 14.01 9 11.01"/>
+                  <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
+                  <polyline points="22 4 12 14.01 9 11.01" />
                 </svg>
                 <h3>Schedules Completed</h3>
               </div>
@@ -553,7 +559,7 @@ export default function AdminPage() {
               </div>
               <span className={styles.terminalTitle}>student_session_join.log</span>
             </div>
-            
+
             <div className={styles.terminalBody} ref={terminalBodyRef}>
               {getCombinedConsoleLines().map((log) => {
                 let typeBadge = 'ONLINE';
@@ -644,9 +650,9 @@ export default function AdminPage() {
                       <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>{u.email}</div>
                     </td>
                     <td>
-                      <select 
-                        className={styles.select} 
-                        value={u.grade || ''} 
+                      <select
+                        className={styles.select}
+                        value={u.grade || ''}
                         onChange={(e) => handleUpdateGrade(u.uid, e.target.value)}
                       >
                         <option value="">Unknown</option>
@@ -684,7 +690,7 @@ export default function AdminPage() {
         <div>
           {/* Sub tabs for Class Chats vs DMs */}
           <div style={{ display: 'flex', gap: 12, marginBottom: 16 }}>
-            <button 
+            <button
               className={`${styles.actionBtn}`}
               style={{
                 padding: '8px 16px',
@@ -698,7 +704,7 @@ export default function AdminPage() {
             >
               Class Chats
             </button>
-            <button 
+            <button
               className={`${styles.actionBtn}`}
               style={{
                 padding: '8px 16px',
@@ -716,9 +722,9 @@ export default function AdminPage() {
 
           <div className={styles.tableWrap}>
             <div style={{ padding: 16, borderBottom: '1px solid var(--border)' }}>
-              <input 
-                type="text" 
-                placeholder={chatSubTab === 'class' ? "Search course name or block..." : "Search student names..."} 
+              <input
+                type="text"
+                placeholder={chatSubTab === 'class' ? "Search course name or block..." : "Search student names..."}
                 value={chatSearch}
                 onChange={(e) => setChatSearch(e.target.value)}
                 className={styles.searchInput}
@@ -738,20 +744,20 @@ export default function AdminPage() {
                 </thead>
                 <tbody>
                   {chats
-                    .filter(c => 
-                      c.courseName.toLowerCase().includes(chatSearch.toLowerCase()) || 
+                    .filter(c =>
+                      c.courseName.toLowerCase().includes(chatSearch.toLowerCase()) ||
                       c.block.toLowerCase().includes(chatSearch.toLowerCase())
                     )
                     .map(c => (
-                    <tr key={c.id}>
-                      <td><strong>{c.courseName}</strong></td>
-                      <td>{c.block} Block</td>
-                      <td>S{c.semester}</td>
-                      <td>
-                        <Link href={`/chat-room?id=${c.id}`} className={styles.actionBtn}>View Chat</Link>
-                      </td>
-                    </tr>
-                  ))}
+                      <tr key={c.id}>
+                        <td><strong>{c.courseName}</strong></td>
+                        <td>{c.block} Block</td>
+                        <td>S{c.semester}</td>
+                        <td>
+                          <Link href={`/chat-room?id=${c.id}`} className={styles.actionBtn}>View Chat</Link>
+                        </td>
+                      </tr>
+                    ))}
                   {chats.length === 0 && (
                     <tr><td colSpan={4} style={{ textAlign: 'center', padding: 20 }}>No class chats exist yet.</td></tr>
                   )}
@@ -778,34 +784,34 @@ export default function AdminPage() {
                     })
                     .filter(dm => dm.names.toLowerCase().includes(chatSearch.toLowerCase()))
                     .map(dm => (
-                    <tr key={dm.id}>
-                      <td><strong>{dm.names}</strong></td>
-                      <td>
-                        {dm.lastMessageSenderName ? (
-                          <span>{dm.lastMessageSenderName}</span>
-                        ) : (
-                          <span style={{ color: 'var(--text-muted)' }}>-</span>
-                        )}
-                      </td>
-                      <td style={{ maxWidth: '300px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                        {dm.lastMessageText ? (
-                          <span>{dm.lastMessageText}</span>
-                        ) : (
-                          <span style={{ color: 'var(--text-muted)' }}>No messages yet</span>
-                        )}
-                      </td>
-                      <td>
-                        {dm.lastMessageAt ? (
-                          <span>{dm.lastMessageAt.toDate().toLocaleString()}</span>
-                        ) : (
-                          <span style={{ color: 'var(--text-muted)' }}>-</span>
-                        )}
-                      </td>
-                      <td>
-                        <Link href={`/chat-room?id=${dm.id}`} className={styles.actionBtn}>View Chat</Link>
-                      </td>
-                    </tr>
-                  ))}
+                      <tr key={dm.id}>
+                        <td><strong>{dm.names}</strong></td>
+                        <td>
+                          {dm.lastMessageSenderName ? (
+                            <span>{dm.lastMessageSenderName}</span>
+                          ) : (
+                            <span style={{ color: 'var(--text-muted)' }}>-</span>
+                          )}
+                        </td>
+                        <td style={{ maxWidth: '300px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                          {dm.lastMessageText ? (
+                            <span>{dm.lastMessageText}</span>
+                          ) : (
+                            <span style={{ color: 'var(--text-muted)' }}>No messages yet</span>
+                          )}
+                        </td>
+                        <td>
+                          {dm.lastMessageAt ? (
+                            <span>{dm.lastMessageAt.toDate().toLocaleString()}</span>
+                          ) : (
+                            <span style={{ color: 'var(--text-muted)' }}>-</span>
+                          )}
+                        </td>
+                        <td>
+                          <Link href={`/chat-room?id=${dm.id}`} className={styles.actionBtn}>View Chat</Link>
+                        </td>
+                      </tr>
+                    ))}
                   {dmChats.length === 0 && (
                     <tr><td colSpan={5} style={{ textAlign: 'center', padding: 20 }}>No direct messages exist yet.</td></tr>
                   )}
@@ -821,7 +827,7 @@ export default function AdminPage() {
           {/* Create Announcement Form */}
           <div className={styles.announcementForm} style={{ maxWidth: '100%' }}>
             <h2 style={{ marginBottom: 16 }}>{editingAnnId ? 'Edit Announcement' : 'Send Announcement'}</h2>
-            
+
             <div className={styles.formGroup}>
               <label>Target Audience</label>
               <select value={annTarget} onChange={(e) => setAnnTarget(e.target.value)}>
@@ -849,15 +855,15 @@ export default function AdminPage() {
 
             <div className={styles.formGroup}>
               <label>Message</label>
-              <textarea 
+              <textarea
                 placeholder="Write your announcement here. It will appear as a banner at the top of the website for the selected users."
                 value={annMessage}
                 onChange={(e) => setAnnMessage(e.target.value)}
               />
             </div>
 
-            <button 
-              className="btn btn-primary" 
+            <button
+              className="btn btn-primary"
               onClick={sendAnnouncement}
               disabled={!annMessage.trim() || annSending}
               style={{ width: '100%' }}
@@ -865,7 +871,7 @@ export default function AdminPage() {
               {annSending ? 'Saving...' : editingAnnId ? 'Update Announcement' : 'Send Announcement'}
             </button>
             {editingAnnId && (
-              <button 
+              <button
                 className={styles.actionBtn}
                 onClick={cancelEditingAnnouncement}
                 style={{ width: '100%', marginTop: '8px', padding: '10px' }}
@@ -935,19 +941,19 @@ export default function AdminPage() {
                       </td>
                       <td>
                         <div className={styles.actions}>
-                          <button 
+                          <button
                             className={styles.actionBtn}
                             onClick={() => startEditingAnnouncement(ann)}
                           >
                             Edit
                           </button>
-                          <button 
+                          <button
                             className={styles.actionBtn}
                             onClick={() => toggleAnnouncementVisibility(ann.id, isViewable)}
                           >
                             {isViewable ? 'Hide' : 'Show'}
                           </button>
-                          <button 
+                          <button
                             className={`${styles.actionBtn} ${styles.danger}`}
                             style={{ color: '#ef4444', borderColor: 'rgba(239, 68, 68, 0.2)' }}
                             onClick={() => deleteAnnouncement(ann.id)}
@@ -994,14 +1000,15 @@ export default function AdminPage() {
                     </span>
                   </td>
                   <td>
-                    <select 
-                      className={styles.select} 
-                      value={f.status} 
+                    <select
+                      className={styles.select}
+                      value={f.status}
                       onChange={(e) => handleFeedbackStatus(f.id, e.target.value as any)}
                     >
                       <option value="pending">Pending</option>
                       <option value="flagged">Flagged</option>
                       <option value="corrected">Corrected</option>
+                      <option value="delete" style={{ color: 'red' }}>Delete</option>
                     </select>
                   </td>
                 </tr>
