@@ -19,7 +19,7 @@ export const DEPARTMENTS = [
   'CS & Engineering',
   'Farm & Food Studies',
   'PE & Wellness',
-  'Flexible Pathways',
+  'Flexible Pathways'
 ] as const;
 
 export const COURSES: Course[] = [
@@ -219,6 +219,7 @@ export const COURSES: Course[] = [
   { id: 'internship', name: 'Work-Based Learning: Internships', department: 'Flexible Pathways' },
   { id: 'trades', name: 'Tools, Techniques, and the Trades', department: 'Flexible Pathways' },
   { id: 'free', name: 'Free / Study Hall', department: 'Flexible Pathways' },
+  { id: 'hb-learning', name: 'Habits of Learning', department: 'Flexible Pathways' },
   { id: 'swtech', name: 'Southwest Tech Program', department: 'Flexible Pathways' },
 ];
 
@@ -307,8 +308,8 @@ export const TEACHERS: Teacher[] = [
   { name: 'Kelsey Towslee', email: 'ktowslee@burrburton.org', role: 'Athletic Trainer', departments: ['PE & Wellness'] },
   { name: 'Kelly Travis', email: 'ktravis@burrburton.org', role: 'Math Teacher', departments: ['Mathematics'] },
   { name: 'Alexander Vincent', email: 'avincent@burrburton.org', role: 'Graphic Design and Photography Teacher', departments: ['Creative Arts: Visual & Design', 'Creative Arts: Media & Performing'] },
-  { name: 'Melanie Virgilio', email: 'mvirgilio@burrburton.org', role: 'Visual Arts Teacher', departments: ['Creative Arts: Visual & Design'] },
   { name: 'Trish Weill', email: 'tweill@burrburton.org', role: 'Visual Arts Teacher', departments: ['Creative Arts: Visual & Design'] },
+  { name: 'Melanie Virgilio', email: 'mvirgilio@burrburton.org', role: 'Visual Arts Teacher', departments: ['Creative Arts: Visual & Design'] },
   { name: 'Thomas von Allmen', email: 'tvonallmen@burrburton.org', role: 'Social Studies Teacher', departments: ['Social Studies'] },
   { name: 'Mr. Jonathan Wilson', email: 'jwilson@burrburton.org', role: 'Social Studies Teacher', departments: ['Social Studies'] },
   { name: 'Madison Wilson', email: 'mwilson@burrburton.org', role: 'Staff', departments: ['Flexible Pathways'] },
