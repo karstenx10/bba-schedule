@@ -150,7 +150,6 @@
 .emptyState p { font-size: 16px; font-weight: 600; color: var(--text-secondary); }
 .emptyState span { font-size: 13px; }
 
-<<<<<<< HEAD
 /* New Styles for Overhaul */
 .clickableCard {
   text-decoration: none;
@@ -198,7 +197,7 @@
 .scheduleView {
   animation: fadeIn 0.2s ease;
 }
-=======
+
 .teacherFilterWrap {
   display: flex;
   background: var(--bg-surface);
@@ -224,4 +223,3 @@
   background: var(--bg-hover);
 }
 
->>>>>>> 0f439d93ec2c82409ab2a9bdb34adea69de8d9ec

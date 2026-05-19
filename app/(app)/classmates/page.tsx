@@ -4,11 +4,7 @@ import { useState, useEffect, Suspense } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { collection, getDocs, query, where, doc, getDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
-<<<<<<< HEAD
-import { getCourseById } from '@/lib/courses';
-=======
 import { COURSES, getCourseById, TEACHERS } from '@/lib/courses';
->>>>>>> 0f439d93ec2c82409ab2a9bdb34adea69de8d9ec
 import { useAuth } from '@/context/AuthContext';
 import Image from 'next/image';
 import Link from 'next/link';
@@ -107,14 +103,11 @@ function ClassmateContent() {
   const [semester, setSemester] = useState<1 | 2>(urlSemester === 2 ? 2 : 1);
   const [classmates, setClassmates] = useState<ClassmateResult[]>([]);
   const [searching, setSearching] = useState(false);
-<<<<<<< HEAD
   const [scheduleData, setScheduleData] = useState<ScheduleDoc | null>(null);
   const [loadingSchedule, setLoadingSchedule] = useState(true);
-=======
   const [search, setSearch] = useState('');
   const [selectedTeacherFilter, setSelectedTeacherFilter] = useState('all');
   const [mySchedule, setMySchedule] = useState<any>(null);
->>>>>>> 0f439d93ec2c82409ab2a9bdb34adea69de8d9ec
 
   // Sync state with URL changes
   useEffect(() => {
@@ -191,9 +184,6 @@ function ClassmateContent() {
 
     findClassmates();
   }, [selectedCourse, semester, user, searchParams]);
-<<<<<<< HEAD
-=======
-
   // Set search text if course is pre-selected via URL
   useEffect(() => {
     const courseId = searchParams.get('courseId');
@@ -202,9 +192,14 @@ function ClassmateContent() {
       if (c) setSearch(c.name);
     }
   }, [searchParams]);
->>>>>>> 0f439d93ec2c82409ab2a9bdb34adea69de8d9ec
 
   const course = getCourseById(selectedCourse);
+
+  const filteredCourses = COURSES.filter(
+    (c) =>
+      c.name.toLowerCase().includes(search.toLowerCase()) ||
+      c.department.toLowerCase().includes(search.toLowerCase())
+  );
 
   const getMyTeacherForCourse = () => {
     if (!mySchedule) return '';
@@ -251,8 +246,6 @@ function ClassmateContent() {
       </div>
 
       <div className={styles.filterBar}>
-<<<<<<< HEAD
-=======
         <div className={styles.searchSection}>
           <div className={styles.searchBox}>
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -265,7 +258,7 @@ function ClassmateContent() {
               onChange={(e) => setSearch(e.target.value)}
             />
             {(search || selectedCourse) && (
-              <button className={styles.clearBtn} onClick={() => { setSearch(''); setSelectedCourse(''); }}>
+              <button className={styles.clearBtn} onClick={() => { setSearch(''); router.push(`/classmates?semester=${semester}`); }}>
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                   <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
                 </svg>
@@ -279,7 +272,7 @@ function ClassmateContent() {
                 <button
                   key={c.id}
                   className={`${styles.courseItem}`}
-                  onClick={() => { setSelectedCourse(c.id); setSearch(c.name); }}
+                  onClick={() => { setSearch(c.name); router.push(`/classmates?courseId=${c.id}&semester=${semester}`); }}
                 >
                   <span className={styles.courseName}>{c.name}</span>
                   <span className={styles.courseDept}>{c.department}</span>
@@ -319,8 +312,6 @@ function ClassmateContent() {
             </select>
           </div>
         )}
-
->>>>>>> 0f439d93ec2c82409ab2a9bdb34adea69de8d9ec
         <div className={styles.semesterToggle}>
           <button 
             className={`${styles.semBtn} ${semester === 1 ? styles.semBtnActive : ''}`}
@@ -368,13 +359,16 @@ function ClassmateContent() {
                 <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/>
                 <path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>
               </svg>
-<<<<<<< HEAD
-              <p>No other students in this block have enrolled yet.</p>
-              <span>Check back after more students add their schedules!</span>
-=======
-              <p>No other students found matching this filter.</p>
-              <span>Try selecting another teacher/section or check back later!</span>
->>>>>>> 0f439d93ec2c82409ab2a9bdb34adea69de8d9ec
+              <p>
+                {selectedTeacherFilter !== 'all'
+                  ? 'No other students found matching this filter.'
+                  : 'No other students in this block have enrolled yet.'}
+              </p>
+              <span>
+                {selectedTeacherFilter !== 'all'
+                  ? 'Try selecting another teacher/section or check back later!'
+                  : 'Check back after more students add their schedules!'}
+              </span>
             </div>
           ) : (
             <div className={styles.classmateGrid}>
