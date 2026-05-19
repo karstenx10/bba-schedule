@@ -396,3 +396,39 @@
   font-style: italic;
 }
 
+.terminalInputRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 0 0 0;
+  border-top: 1px dashed #334155;
+  margin-top: 8px;
+}
+
+.termPrompt {
+  color: var(--accent);
+  font-weight: bold;
+  font-size: 14px;
+}
+
+.termInput {
+  background: transparent;
+  border: none;
+  outline: none;
+  color: #f8fafc;
+  font-family: inherit;
+  font-size: 13px;
+  flex: 1;
+}
+
+.badgeCmd {
+  background: rgba(139, 92, 246, 0.15);
+  color: #a78bfa;
+}
+
+.badgeOut {
+  background: rgba(244, 63, 94, 0.15);
+  color: #fb7185;
+}
+
+

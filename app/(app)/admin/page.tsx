@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import { useRouter } from 'next/navigation';
 import { collection, getDocs, doc, updateDoc, query, where, addDoc, serverTimestamp, setDoc, getDoc, orderBy, onSnapshot } from 'firebase/firestore';
@@ -17,6 +17,7 @@ interface UserProfile {
   timeoutUntil?: { toDate: () => Date } | null;
   forceLogout?: boolean;
   lastActive?: any;
+  createdAt?: any;
 }
 
 interface Chat {
@@ -69,6 +70,18 @@ export default function AdminPage() {
   // Dashboard & Logs State
   const [logs, setLogs] = useState<SystemLog[]>([]);
   const [schedulesCount, setSchedulesCount] = useState(0);
+  const [completedUids, setCompletedUids] = useState<string[]>([]);
+
+  // Interactive CLI Console state
+  const [cmdValue, setCmdValue] = useState('');
+  const [customConsoleLines, setCustomConsoleLines] = useState<{
+    id: string;
+    type: 'input' | 'output';
+    message: string;
+    timestamp: Date;
+  }[]>([]);
+
+  const terminalBodyRef = useRef<HTMLDivElement>(null);
 
   // Announcement State
   const [annTarget, setAnnTarget] = useState('all'); // 'all', '9', '10', '11', '12', or specific uid
@@ -111,10 +124,11 @@ export default function AdminPage() {
       setLogs(snap.docs.map(d => ({ id: d.id, ...d.data() } as SystemLog)));
     });
 
-    // Real-time subscription to schedules completed count
+    // Real-time subscription to schedules completed count & uids
     const schedQuery = collection(db, 'schedules');
     const unsubSched = onSnapshot(schedQuery, (snap) => {
       setSchedulesCount(snap.size);
+      setCompletedUids(snap.docs.map(doc => doc.id));
     });
 
     return () => {
@@ -122,6 +136,131 @@ export default function AdminPage() {
       unsubSched();
     };
   }, [isAdmin]);
+
+  // Terminal Auto-scroll logic
+  useEffect(() => {
+    if (terminalBodyRef.current) {
+      terminalBodyRef.current.scrollTop = terminalBodyRef.current.scrollHeight;
+    }
+  }, [logs, customConsoleLines, users]);
+
+  const handleConsoleSubmit = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key !== 'Enter' || !cmdValue.trim()) return;
+
+    const cmd = cmdValue.trim();
+    setCmdValue('');
+
+    const inputLine = {
+      id: `cmd_in_${Date.now()}`,
+      type: 'input' as const,
+      message: cmd,
+      timestamp: new Date()
+    };
+
+    let outputMsg = '';
+    const cleanCmd = cmd.toLowerCase();
+
+    if (cleanCmd === 'help') {
+      outputMsg = 'Available commands:\n  help      - Display this help information menu.\n  completed - List all students who have completed their schedules.\n  users     - Show count of registered schedule profiles.\n  clear     - Clear custom logs and reset console view.';
+    } else if (cleanCmd === 'completed') {
+      const completedUsers = users.filter(u => completedUids.includes(u.uid));
+      if (completedUsers.length > 0) {
+        outputMsg = `Completed schedules (${completedUsers.length}):\n` + 
+          completedUsers.map((u, i) => `  ${i + 1}. ${u.displayName} (${u.email}) [Grade: ${u.grade || 'N/A'}]`).join('\n');
+      } else {
+        outputMsg = 'No students have completed schedules yet.';
+      }
+    } else if (cleanCmd === 'users') {
+      outputMsg = `Total registered schedule profiles: ${users.length} user(s).`;
+    } else if (cleanCmd === 'clear') {
+      setCustomConsoleLines([]);
+      return;
+    } else {
+      outputMsg = `Command not recognized: '${cmd}'. Type 'help' for support.`;
+    }
+
+    const outputLine = {
+      id: `cmd_out_${Date.now()}`,
+      type: 'output' as const,
+      message: outputMsg,
+      timestamp: new Date()
+    };
+
+    setCustomConsoleLines(prev => [...prev, inputLine, outputLine]);
+  };
+
+  const getCombinedConsoleLines = () => {
+    // 1. Map existing users into historical join logs
+    const historicalJoins = users
+      .filter(u => u.createdAt)
+      .map(u => {
+        const timestamp = typeof (u.createdAt as any).toDate === 'function'
+          ? (u.createdAt as any).toDate()
+          : new Date(u.createdAt as any);
+        return {
+          id: `hist_join_${u.uid}`,
+          uid: u.uid,
+          displayName: u.displayName,
+          email: u.email,
+          type: 'join' as const,
+          message: 'Created schedule profile for the first time',
+          timestamp
+        };
+      });
+
+    // 2. Map reactive real-time logs from Firestore logs state
+    const firestoreLogs = logs
+      .map(log => {
+        const timestamp = log.timestamp?.toDate 
+          ? log.timestamp.toDate() 
+          : new Date();
+        
+        let details = 'Logged into platform session';
+        if (log.type === 'join') details = 'Created schedule profile for the first time';
+        else if (log.type === 'schedule_save') details = 'Saved schedule blocks to the database';
+
+        return {
+          id: log.id,
+          uid: log.uid,
+          displayName: log.displayName,
+          email: log.email,
+          type: log.type,
+          message: details,
+          timestamp
+        };
+      });
+
+    // 3. Map custom command lines
+    const cliLines = customConsoleLines.map(line => ({
+      id: line.id,
+      uid: '',
+      displayName: 'system',
+      email: '',
+      type: (line.type === 'input' ? 'cmd_input' : 'cmd_output') as any,
+      message: line.message,
+      timestamp: line.timestamp
+    }));
+
+    // 4. Combine all together
+    const all = [...historicalJoins, ...firestoreLogs, ...cliLines];
+
+    // Filter duplicates (e.g. if we have dynamic "join" logs and historical user createdAt, keep only one)
+    const seen = new Set<string>();
+    const unique: typeof all = [];
+
+    // Sort by timestamp asc first so we merge logically like a terminal stream
+    all.sort((a, b) => a.timestamp.getTime() - b.timestamp.getTime());
+
+    for (const item of all) {
+      const dupKey = item.type === 'join' ? `join_${item.uid}` : item.id;
+      if (!seen.has(dupKey)) {
+        seen.add(dupKey);
+        unique.push(item);
+      }
+    }
+
+    return unique;
+  };
 
   const updateUser = async (uid: string, data: Partial<UserProfile>) => {
     await updateDoc(doc(db, 'users', uid), data);
@@ -232,39 +371,61 @@ export default function AdminPage() {
               </div>
               <span className={styles.terminalTitle}>student_session_join.log</span>
             </div>
-            <div className={styles.terminalBody}>
-              {logs.slice(0, 50).map((log) => {
+            
+            <div className={styles.terminalBody} ref={terminalBodyRef}>
+              {getCombinedConsoleLines().map((log) => {
                 let typeBadge = 'AUTH';
                 let badgeClass = styles.badgeAuth;
-                let details = 'Logged into platform session';
 
                 if (log.type === 'join') {
                   typeBadge = 'JOIN';
                   badgeClass = styles.badgeJoin;
-                  details = 'Created schedule profile for the first time';
                 } else if (log.type === 'schedule_save') {
                   typeBadge = 'SAVE';
                   badgeClass = styles.badgeSave;
-                  details = 'Saved schedule blocks to the database';
+                } else if (log.type === 'cmd_input') {
+                  typeBadge = 'IN';
+                  badgeClass = styles.badgeCmd;
+                } else if (log.type === 'cmd_output') {
+                  typeBadge = 'OUT';
+                  badgeClass = styles.badgeOut;
                 }
 
-                const logTime = log.timestamp?.toDate 
-                  ? log.timestamp.toDate().toLocaleString() 
-                  : new Date().toLocaleString();
+                const logTime = log.timestamp.toLocaleTimeString();
 
                 return (
                   <div key={log.id} className={styles.terminalLine}>
                     <span className={styles.termTimestamp}>[{logTime}]</span>
                     <span className={`${styles.termBadge} ${badgeClass}`}>{typeBadge}</span>
-                    <span className={styles.termName}>{log.displayName}</span>
-                    <span className={styles.termEmail}>({log.email})</span>
-                    <span className={styles.termMessage}>{details}</span>
+                    {log.type !== 'cmd_input' && log.type !== 'cmd_output' ? (
+                      <>
+                        <span className={styles.termName}>{log.displayName}</span>
+                        {log.email && <span className={styles.termEmail}>({log.email})</span>}
+                        <span className={styles.termMessage}>{log.message}</span>
+                      </>
+                    ) : (
+                      <span className={styles.termMessage} style={{ whiteSpace: 'pre-wrap' }}>
+                        {log.type === 'cmd_input' ? `$ ${log.message}` : log.message}
+                      </span>
+                    )}
                   </div>
                 );
               })}
-              {logs.length === 0 && (
+              {getCombinedConsoleLines().length === 0 && (
                 <div className={styles.terminalEmpty}>Listening for live student connections...</div>
               )}
+            </div>
+
+            <div className={styles.terminalInputRow} style={{ padding: '8px 16px 12px', background: '#1e293b' }}>
+              <span className={styles.termPrompt}>$</span>
+              <input
+                type="text"
+                className={styles.termInput}
+                placeholder="Type command (e.g. 'help', 'completed', 'users', 'clear')..."
+                value={cmdValue}
+                onChange={(e) => setCmdValue(e.target.value)}
+                onKeyDown={handleConsoleSubmit}
+              />
             </div>
           </div>
         </div>
