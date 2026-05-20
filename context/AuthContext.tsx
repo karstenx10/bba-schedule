@@ -10,7 +10,7 @@ import {
 import { doc, getDoc, setDoc, updateDoc, serverTimestamp, onSnapshot, addDoc, collection } from 'firebase/firestore';
 import { auth, db, googleProvider } from '@/lib/firebase';
 
-const ADMIN_EMAILS = ['kolsen29@burrburton.org', 'ebuikema29@burrburton.org'];
+const ADMIN_EMAILS = ['kolsen29@burrburton.org', 'ebuikema29@burrburton.org', 'mwohlleber29@burrburton.org'];
 
 interface UserProfile {
   uid: string;
