@@ -527,9 +527,6 @@ export default function AdminPage() {
     <div className={`${styles.page} fade-in`}>
       <div className={styles.header}>
         <h1 className={styles.title}>Admin Panel</h1>
-        <p style={{ fontSize: 13, color: 'var(--text-muted)', marginTop: 4 }}>
-          Admin-only · Use the <strong style={{ color: 'var(--gold-400)' }}>Student Schedules</strong> tab to browse any student&apos;s classes
-        </p>
       </div>
 
       <div className={styles.tabs}>
