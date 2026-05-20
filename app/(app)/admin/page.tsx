@@ -7,6 +7,8 @@ import { collection, getDocs, doc, updateDoc, query, where, addDoc, serverTimest
 import { db } from '@/lib/firebase';
 import styles from './admin.module.css';
 import Link from 'next/link';
+import AdminSchedulesTab from '@/components/admin/AdminSchedulesTab';
+import { parseScheduleDoc, type ScheduleDoc } from '@/lib/schedule';
 
 interface UserProfile {
   uid: string;
@@ -51,8 +53,9 @@ export default function AdminPage() {
   const { user, isAdmin, loading: authLoading } = useAuth();
   const router = useRouter();
 
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'users' | 'chats' | 'announcements' | 'feedback'>('dashboard');
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'users' | 'schedules' | 'chats' | 'announcements' | 'feedback'>('dashboard');
   const [users, setUsers] = useState<UserProfile[]>([]);
+  const [schedules, setSchedules] = useState<Record<string, ScheduleDoc | null>>({});
   const [chats, setChats] = useState<Chat[]>([]);
 
   const [feedbackList, setFeedbackList] = useState<Feedback[]>([]);
@@ -107,6 +110,13 @@ export default function AdminPage() {
     setLoading(true);
     const uSnap = await getDocs(collection(db, 'users'));
     setUsers(uSnap.docs.map(d => d.data() as UserProfile));
+
+    const sSnap = await getDocs(collection(db, 'schedules'));
+    const scheduleMap: Record<string, ScheduleDoc | null> = {};
+    sSnap.docs.forEach((d) => {
+      scheduleMap[d.id] = parseScheduleDoc(d.data() as Record<string, unknown>);
+    });
+    setSchedules(scheduleMap);
 
     const cSnap = await getDocs(query(collection(db, 'chats'), where('type', '==', 'class')));
     setChats(cSnap.docs.map(d => ({ id: d.id, ...d.data() } as Chat)));
@@ -508,6 +518,7 @@ export default function AdminPage() {
       <div className={styles.tabs}>
         <button className={`${styles.tab} ${activeTab === 'dashboard' ? styles.active : ''}`} onClick={() => setActiveTab('dashboard')}>Dashboard</button>
         <button className={`${styles.tab} ${activeTab === 'users' ? styles.active : ''}`} onClick={() => setActiveTab('users')}>Users</button>
+        <button className={`${styles.tab} ${activeTab === 'schedules' ? styles.active : ''}`} onClick={() => setActiveTab('schedules')}>Schedules</button>
         <button className={`${styles.tab} ${activeTab === 'chats' ? styles.active : ''}`} onClick={() => { setActiveTab('chats'); setChatSearch(''); }}>Chats</button>
         <button className={`${styles.tab} ${activeTab === 'announcements' ? styles.active : ''}`} onClick={() => setActiveTab('announcements')}>Announcements</button>
         <button className={`${styles.tab} ${activeTab === 'feedback' ? styles.active : ''}`} onClick={() => setActiveTab('feedback')}>User Feedback</button>
@@ -693,6 +704,10 @@ export default function AdminPage() {
             </tbody>
           </table>
         </div>
+      )}
+
+      {activeTab === 'schedules' && (
+        <AdminSchedulesTab users={users} schedules={schedules} />
       )}
 
       {activeTab === 'chats' && (
