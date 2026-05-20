@@ -1,6 +1,7 @@
 'use client';
 
 import { useMemo, useState } from 'react';
+import { useAuth } from '@/context/AuthContext';
 import styles from '@/app/(app)/admin/admin.module.css';
 import {
   ScheduleDoc,
@@ -20,6 +21,7 @@ interface UserRow {
 interface AdminSchedulesTabProps {
   users: UserRow[];
   schedules: Record<string, ScheduleDoc | null>;
+  loading?: boolean;
 }
 
 function BlockRow({
@@ -65,7 +67,8 @@ function SemesterView({ sched, semester }: { sched: SemesterSchedule; semester: 
   );
 }
 
-export default function AdminSchedulesTab({ users, schedules }: AdminSchedulesTabProps) {
+export default function AdminSchedulesTab({ users, schedules, loading }: AdminSchedulesTabProps) {
+  const { isAdmin } = useAuth();
   const [search, setSearch] = useState('');
   const [selectedUid, setSelectedUid] = useState<string | null>(null);
   const [onlyWithSchedule, setOnlyWithSchedule] = useState(false);
@@ -113,6 +116,21 @@ export default function AdminSchedulesTab({ users, schedules }: AdminSchedulesTa
   const activeUid = selectedUid ?? sortedFiltered[0]?.uid ?? null;
   const activeUser = sortedFiltered.find((u) => u.uid === activeUid) ?? users.find((u) => u.uid === activeUid);
   const activeSchedule = activeUid ? schedules[activeUid] : null;
+
+  if (!isAdmin) {
+    return (
+      <p className={styles.schedulePlaceholder}>You do not have permission to view student schedules.</p>
+    );
+  }
+
+  if (loading) {
+    return (
+      <div className={styles.schedulePlaceholder} style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+        <div className="spinner" style={{ width: 24, height: 24 }} />
+        Loading student schedules…
+      </div>
+    );
+  }
 
   return (
     <div className={styles.scheduleBrowser}>

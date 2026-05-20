@@ -9,8 +9,7 @@ import {
 } from 'firebase/auth';
 import { doc, getDoc, setDoc, updateDoc, serverTimestamp, onSnapshot, addDoc, collection } from 'firebase/firestore';
 import { auth, db, googleProvider } from '@/lib/firebase';
-
-const ADMIN_EMAILS = ['kolsen29@burrburton.org', 'ebuikema29@burrburton.org', 'mwohlleber29@burrburton.org'];
+import { isAdminEmail } from '@/lib/admins';
 
 interface UserProfile {
   uid: string;
@@ -110,7 +109,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             }
 
             setProfile(data);
-            setIsAdmin(ADMIN_EMAILS.includes(data.email ?? ''));
+            setIsAdmin(isAdminEmail(data.email));
           }
         });
       } else {
