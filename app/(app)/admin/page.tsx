@@ -7,6 +7,8 @@ import { collection, getDocs, doc, updateDoc, query, where, addDoc, serverTimest
 import { db } from '@/lib/firebase';
 import styles from './admin.module.css';
 import Link from 'next/link';
+import AdminSchedulesTab from '@/components/admin/AdminSchedulesTab';
+import { parseScheduleDoc, type ScheduleDoc } from '@/lib/schedule';
 
 interface UserProfile {
   uid: string;
@@ -51,8 +53,10 @@ export default function AdminPage() {
   const { user, isAdmin, loading: authLoading } = useAuth();
   const router = useRouter();
 
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'users' | 'chats' | 'announcements' | 'feedback'>('dashboard');
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'users' | 'schedules' | 'chats' | 'announcements' | 'feedback'>('dashboard');
   const [users, setUsers] = useState<UserProfile[]>([]);
+  const [schedules, setSchedules] = useState<Record<string, ScheduleDoc | null>>({});
+  const [schedulesLoading, setSchedulesLoading] = useState(false);
   const [chats, setChats] = useState<Chat[]>([]);
 
   const [feedbackList, setFeedbackList] = useState<Feedback[]>([]);
@@ -122,6 +126,26 @@ export default function AdminPage() {
   useEffect(() => {
     if (isAdmin) loadData();
   }, [isAdmin]);
+
+  useEffect(() => {
+    if (!isAdmin || activeTab !== 'schedules') return;
+    let cancelled = false;
+    setSchedulesLoading(true);
+    (async () => {
+      try {
+        const sSnap = await getDocs(collection(db, 'schedules'));
+        if (cancelled) return;
+        const scheduleMap: Record<string, ScheduleDoc | null> = {};
+        sSnap.docs.forEach((d) => {
+          scheduleMap[d.id] = parseScheduleDoc(d.data() as Record<string, unknown>);
+        });
+        setSchedules(scheduleMap);
+      } finally {
+        if (!cancelled) setSchedulesLoading(false);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [isAdmin, activeTab]);
 
   useEffect(() => {
     if (!isAdmin) return;
@@ -508,6 +532,7 @@ export default function AdminPage() {
       <div className={styles.tabs}>
         <button className={`${styles.tab} ${activeTab === 'dashboard' ? styles.active : ''}`} onClick={() => setActiveTab('dashboard')}>Dashboard</button>
         <button className={`${styles.tab} ${activeTab === 'users' ? styles.active : ''}`} onClick={() => setActiveTab('users')}>Users</button>
+        <button className={`${styles.tab} ${activeTab === 'schedules' ? styles.active : ''}`} onClick={() => setActiveTab('schedules')}>Student Schedules</button>
         <button className={`${styles.tab} ${activeTab === 'chats' ? styles.active : ''}`} onClick={() => { setActiveTab('chats'); setChatSearch(''); }}>Chats</button>
         <button className={`${styles.tab} ${activeTab === 'announcements' ? styles.active : ''}`} onClick={() => setActiveTab('announcements')}>Announcements</button>
         <button className={`${styles.tab} ${activeTab === 'feedback' ? styles.active : ''}`} onClick={() => setActiveTab('feedback')}>User Feedback</button>
@@ -693,6 +718,10 @@ export default function AdminPage() {
             </tbody>
           </table>
         </div>
+      )}
+
+      {activeTab === 'schedules' && (
+        <AdminSchedulesTab users={users} schedules={schedules} loading={schedulesLoading} />
       )}
 
       {activeTab === 'chats' && (
