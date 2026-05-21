@@ -158,14 +158,14 @@ export default function AdminSchedulesTab({ users, schedules, loading }: AdminSc
 
     const results: ClassViewStudent[] = [];
 
-    const blockDefs = [
-      { key: 'aBlock', teacherKey: 'aBlockTeacher', label: 'A Block' },
-      { key: 'bBlock', teacherKey: 'bBlockTeacher', label: 'B Block' },
-      { key: 'cBlock', teacherKey: 'cBlockTeacher', label: 'C Block' },
-      { key: 'dBlock', teacherKey: 'dBlockTeacher', label: 'D Block' },
-      { key: 'cdBlock', teacherKey: 'cdBlockTeacher', label: 'CD Block' },
-      { key: 'eBlock', teacherKey: 'eBlockTeacher', label: 'E Block' },
-    ] as const;
+    const getBlockCourses = (s: SemesterSchedule) => [
+      { course: s.aBlock, teacher: s.aBlockTeacher, label: 'A Block' },
+      { course: s.bBlock, teacher: s.bBlockTeacher, label: 'B Block' },
+      { course: s.cBlock, teacher: s.cBlockTeacher, label: 'C Block' },
+      { course: s.dBlock, teacher: s.dBlockTeacher, label: 'D Block' },
+      { course: s.cdBlock, teacher: s.cdBlockTeacher, label: 'CD Block' },
+      { course: s.eBlock, teacher: s.eBlockTeacher, label: 'E Block' },
+    ];
 
     for (const user of users) {
       const sched = schedules[user.uid];
@@ -175,13 +175,11 @@ export default function AdminSchedulesTab({ users, schedules, loading }: AdminSc
       let teacher: string | undefined;
 
       for (const sem of [{ s: sched.semester1, label: 'S1' }, { s: sched.semester2, label: 'S2' }]) {
-        for (const bd of blockDefs) {
-          const courseVal = (sem.s as Record<string, unknown>)[bd.key] as string;
-          if (courseVal === viewingCourseId) {
+        for (const bd of getBlockCourses(sem.s)) {
+          if (bd.course === viewingCourseId) {
             blocks.push(`${sem.label} ${bd.label}`);
-            const teacherVal = (sem.s as Record<string, unknown>)[bd.teacherKey] as string | undefined;
-            if (teacherVal && !teacher) {
-              teacher = getTeacherDisplayName(teacherVal) || teacherVal;
+            if (bd.teacher && !teacher) {
+              teacher = getTeacherDisplayName(bd.teacher) || bd.teacher;
             }
           }
         }
