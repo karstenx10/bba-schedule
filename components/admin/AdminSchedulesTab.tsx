@@ -76,22 +76,22 @@ function SemesterView({
 }: {
   sched: SemesterSchedule;
   semester: 1 | 2;
-  onCourseClick?: (courseId: string) => void;
+  onCourseClick?: (courseId: string, semester: 1 | 2, blockKey: string, blockLabel: string) => void;
 }) {
   return (
     <div className={styles.scheduleSemester}>
       <h3 className={styles.scheduleSemesterTitle}>Semester {semester}</h3>
-      <BlockRow label="A Block" time="Daily, 8:15–9:20" courseId={sched.aBlock} teacherEmail={sched.aBlockTeacher} onCourseClick={onCourseClick} />
-      <BlockRow label="B Block" time="Daily, 9:25–10:30" courseId={sched.bBlock} teacherEmail={sched.bBlockTeacher} onCourseClick={onCourseClick} />
+      <BlockRow label="A Block" time="Daily, 8:15–9:20" courseId={sched.aBlock} teacherEmail={sched.aBlockTeacher} onCourseClick={(id) => onCourseClick?.(id, semester, 'aBlock', 'A Block')} />
+      <BlockRow label="B Block" time="Daily, 9:25–10:30" courseId={sched.bBlock} teacherEmail={sched.bBlockTeacher} onCourseClick={(id) => onCourseClick?.(id, semester, 'bBlock', 'B Block')} />
       {sched.hasCDBlock ? (
-        <BlockRow label="CD Block" time="Double, daily" courseId={sched.cdBlock} teacherEmail={sched.cdBlockTeacher} onCourseClick={onCourseClick} />
+        <BlockRow label="CD Block" time="Double, daily" courseId={sched.cdBlock} teacherEmail={sched.cdBlockTeacher} onCourseClick={(id) => onCourseClick?.(id, semester, 'cdBlock', 'CD Block')} />
       ) : (
         <>
-          <BlockRow label="C Block" time="Day 1" courseId={sched.cBlock} teacherEmail={sched.cBlockTeacher} onCourseClick={onCourseClick} />
-          <BlockRow label="D Block" time="Day 2" courseId={sched.dBlock} teacherEmail={sched.dBlockTeacher} onCourseClick={onCourseClick} />
+          <BlockRow label="C Block" time="Day 1" courseId={sched.cBlock} teacherEmail={sched.cBlockTeacher} onCourseClick={(id) => onCourseClick?.(id, semester, 'cBlock', 'C Block')} />
+          <BlockRow label="D Block" time="Day 2" courseId={sched.dBlock} teacherEmail={sched.dBlockTeacher} onCourseClick={(id) => onCourseClick?.(id, semester, 'dBlock', 'D Block')} />
         </>
       )}
-      <BlockRow label="E Block" time="Daily, 1:30–2:35" courseId={sched.eBlock} teacherEmail={sched.eBlockTeacher} onCourseClick={onCourseClick} />
+      <BlockRow label="E Block" time="Daily, 1:30–2:35" courseId={sched.eBlock} teacherEmail={sched.eBlockTeacher} onCourseClick={(id) => onCourseClick?.(id, semester, 'eBlock', 'E Block')} />
     </div>
   );
 }
@@ -110,7 +110,13 @@ export default function AdminSchedulesTab({ users, schedules, loading }: AdminSc
   const [search, setSearch] = useState('');
   const [selectedUid, setSelectedUid] = useState<string | null>(null);
   const [onlyWithSchedule, setOnlyWithSchedule] = useState(false);
-  const [viewingCourseId, setViewingCourseId] = useState<string | null>(null);
+  interface ViewingCourseState {
+    courseId: string;
+    semester: 1 | 2;
+    blockKey: string;
+    blockLabel: string;
+  }
+  const [viewingCourse, setViewingCourse] = useState<ViewingCourseState | null>(null);
 
   const sortedFiltered = useMemo(() => {
     const q = search.trim().toLowerCase();
@@ -154,45 +160,54 @@ export default function AdminSchedulesTab({ users, schedules, loading }: AdminSc
 
   // Compute students in a given course
   const studentsInCourse = useMemo(() => {
-    if (!viewingCourseId) return [];
+    if (!viewingCourse) return [];
 
     const results: ClassViewStudent[] = [];
-
-    const getBlockCourses = (s: SemesterSchedule) => [
-      { course: s.aBlock, teacher: s.aBlockTeacher, label: 'A Block' },
-      { course: s.bBlock, teacher: s.bBlockTeacher, label: 'B Block' },
-      { course: s.cBlock, teacher: s.cBlockTeacher, label: 'C Block' },
-      { course: s.dBlock, teacher: s.dBlockTeacher, label: 'D Block' },
-      { course: s.cdBlock, teacher: s.cdBlockTeacher, label: 'CD Block' },
-      { course: s.eBlock, teacher: s.eBlockTeacher, label: 'E Block' },
-    ];
 
     for (const user of users) {
       const sched = schedules[user.uid];
       if (!sched) continue;
 
-      const blocks: string[] = [];
-      let teacher: string | undefined;
+      const semesterSchedule = viewingCourse.semester === 1 ? sched.semester1 : sched.semester2;
 
-      for (const sem of [{ s: sched.semester1, label: 'S1' }, { s: sched.semester2, label: 'S2' }]) {
-        for (const bd of getBlockCourses(sem.s)) {
-          if (bd.course === viewingCourseId) {
-            blocks.push(`${sem.label} ${bd.label}`);
-            if (bd.teacher && !teacher) {
-              teacher = getTeacherDisplayName(bd.teacher) || bd.teacher;
-            }
-          }
-        }
+      let courseVal = '';
+      let teacherVal: string | undefined;
+
+      switch (viewingCourse.blockKey) {
+        case 'aBlock':
+          courseVal = semesterSchedule.aBlock;
+          teacherVal = semesterSchedule.aBlockTeacher;
+          break;
+        case 'bBlock':
+          courseVal = semesterSchedule.bBlock;
+          teacherVal = semesterSchedule.bBlockTeacher;
+          break;
+        case 'cBlock':
+          courseVal = semesterSchedule.cBlock;
+          teacherVal = semesterSchedule.cBlockTeacher;
+          break;
+        case 'dBlock':
+          courseVal = semesterSchedule.dBlock;
+          teacherVal = semesterSchedule.dBlockTeacher;
+          break;
+        case 'cdBlock':
+          courseVal = semesterSchedule.cdBlock;
+          teacherVal = semesterSchedule.cdBlockTeacher;
+          break;
+        case 'eBlock':
+          courseVal = semesterSchedule.eBlock;
+          teacherVal = semesterSchedule.eBlockTeacher;
+          break;
       }
 
-      if (blocks.length > 0) {
+      if (courseVal === viewingCourse.courseId) {
         results.push({
           uid: user.uid,
           displayName: user.displayName || 'Unknown',
           email: user.email,
           grade: user.grade,
-          blocks,
-          teacher,
+          blocks: [`S${viewingCourse.semester} ${viewingCourse.blockLabel}`],
+          teacher: teacherVal ? (getTeacherDisplayName(teacherVal) || teacherVal) : undefined,
         });
       }
     }
@@ -202,10 +217,10 @@ export default function AdminSchedulesTab({ users, schedules, loading }: AdminSc
     );
 
     return results;
-  }, [viewingCourseId, users, schedules]);
+  }, [viewingCourse, users, schedules]);
 
-  const handleCourseClick = useCallback((courseId: string) => {
-    setViewingCourseId(courseId);
+  const handleCourseClick = useCallback((courseId: string, semester: 1 | 2, blockKey: string, blockLabel: string) => {
+    setViewingCourse({ courseId, semester, blockKey, blockLabel });
   }, []);
 
   const activeUid = selectedUid ?? sortedFiltered[0]?.uid ?? null;
@@ -316,19 +331,19 @@ export default function AdminSchedulesTab({ users, schedules, loading }: AdminSc
       </div>
 
       {/* Class Roster Modal */}
-      {viewingCourseId && (
-        <div className={styles.classRosterOverlay} onClick={() => setViewingCourseId(null)}>
+      {viewingCourse && (
+        <div className={styles.classRosterOverlay} onClick={() => setViewingCourse(null)}>
           <div className={styles.classRosterModal} onClick={(e) => e.stopPropagation()}>
             <div className={styles.classRosterHeader}>
               <div>
-                <h2 className={styles.classRosterTitle}>{getCourseDisplayName(viewingCourseId)}</h2>
+                <h2 className={styles.classRosterTitle}>{getCourseDisplayName(viewingCourse.courseId)}</h2>
                 <p className={styles.classRosterSubtitle}>
-                  {studentsInCourse.length} student{studentsInCourse.length === 1 ? '' : 's'} enrolled
+                  Semester {viewingCourse.semester} — {viewingCourse.blockLabel} · {studentsInCourse.length} student{studentsInCourse.length === 1 ? '' : 's'} enrolled
                 </p>
               </div>
               <button
                 className={styles.classRosterClose}
-                onClick={() => setViewingCourseId(null)}
+                onClick={() => setViewingCourse(null)}
                 aria-label="Close"
               >
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
@@ -340,7 +355,7 @@ export default function AdminSchedulesTab({ users, schedules, loading }: AdminSc
 
             {studentsInCourse.length === 0 ? (
               <div className={styles.classRosterEmpty}>
-                No students have selected this class in their schedule.
+                No students have selected this class in this slot.
               </div>
             ) : (
               <div className={styles.classRosterList}>
@@ -350,7 +365,7 @@ export default function AdminSchedulesTab({ users, schedules, loading }: AdminSc
                     className={styles.classRosterItem}
                     onClick={() => {
                       setSelectedUid(s.uid);
-                      setViewingCourseId(null);
+                      setViewingCourse(null);
                     }}
                   >
                     <div className={styles.classRosterIndex}>{i + 1}</div>
