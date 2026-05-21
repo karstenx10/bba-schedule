@@ -358,6 +358,11 @@
   color: #f87171;
 }
 
+.status.declined {
+  background: rgba(148, 163, 184, 0.2);
+  color: var(--text-muted);
+}
+
 .status.timeout {
   background: rgba(201,162,39,0.2);
   color: var(--gold-300);

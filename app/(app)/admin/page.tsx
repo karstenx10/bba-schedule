@@ -36,7 +36,7 @@ interface Feedback {
   uid: string;
   displayName: string;
   text: string;
-  status: 'pending' | 'corrected' | 'flagged';
+  status: 'pending' | 'corrected' | 'declined' | 'flagged';
   createdAt: any;
 }
 
@@ -432,7 +432,7 @@ export default function AdminPage() {
   };
   const handleUpdateGrade = (uid: string, grade: string) => updateUser(uid, { grade });
 
-  const handleFeedbackStatus = async (id: string, status: 'pending' | 'corrected' | 'flagged' | 'delete') => {
+  const handleFeedbackStatus = async (id: string, status: 'pending' | 'corrected' | 'declined' | 'flagged' | 'delete') => {
     if (status === 'delete') {
       if (!window.confirm('Are you sure you want to delete this feedback?')) return;
       await deleteDoc(doc(db, 'feedback', id));
@@ -441,14 +441,29 @@ export default function AdminPage() {
     }
 
     const feedbackItem = feedbackList.find(f => f.id === id);
-    const wasAlreadyCorrected = feedbackItem?.status === 'corrected';
+    const previousStatus = feedbackItem?.status;
 
     await updateDoc(doc(db, 'feedback', id), { status });
     setFeedbackList(feedbackList.map(f => f.id === id ? { ...f, status } : f));
 
-    if (status === 'corrected' && !wasAlreadyCorrected && feedbackItem) {
+    if (!feedbackItem || previousStatus === status) return;
+
+    const excerpt =
+      feedbackItem.text.length > 50
+        ? feedbackItem.text.substring(0, 50) + '...'
+        : feedbackItem.text;
+
+    if (status === 'corrected') {
       await addDoc(collection(db, 'announcements'), {
-        text: `An admin has marked your feedback as corrected: "${feedbackItem.text.length > 50 ? feedbackItem.text.substring(0, 50) + '...' : feedbackItem.text}"`,
+        text: `An admin has marked your feedback as corrected: "${excerpt}"`,
+        target: feedbackItem.uid,
+        type: 'update',
+        viewable: true,
+        createdAt: serverTimestamp()
+      });
+    } else if (status === 'declined') {
+      await addDoc(collection(db, 'announcements'), {
+        text: `An admin has reviewed your feedback and will not be making this change: "${excerpt}"`,
         target: feedbackItem.uid,
         type: 'update',
         viewable: true,
@@ -948,7 +963,17 @@ export default function AdminPage() {
                   <td><strong>{f.displayName}</strong></td>
                   <td style={{ whiteSpace: 'pre-wrap', maxWidth: '400px' }}>{f.text}</td>
                   <td>
-                    <span className={`${styles.status} ${f.status === 'corrected' ? styles.active : f.status === 'flagged' ? styles.banned : styles.timeout}`}>
+                    <span
+                      className={`${styles.status} ${
+                        f.status === 'corrected'
+                          ? styles.active
+                          : f.status === 'declined'
+                            ? styles.declined
+                            : f.status === 'flagged'
+                              ? styles.banned
+                              : styles.timeout
+                      }`}
+                    >
                       {f.status.charAt(0).toUpperCase() + f.status.slice(1)}
                     </span>
                   </td>
@@ -959,8 +984,9 @@ export default function AdminPage() {
                       onChange={(e) => handleFeedbackStatus(f.id, e.target.value as any)}
                     >
                       <option value="pending">Pending</option>
-                      <option value="flagged">Flagged</option>
                       <option value="corrected">Corrected</option>
+                      <option value="declined">Declined</option>
+                      <option value="flagged">Flagged</option>
                       <option value="delete" style={{ color: 'red' }}>Delete</option>
                     </select>
                   </td>
